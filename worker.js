@@ -30,7 +30,9 @@ function setupWorker (botToken) {
     }
   })
 
-  const bot = new Telegraf(botToken)
+  const bot = new Telegraf(botToken, {
+    username: 'soniccisquotes_bot'
+  })
 
   bot.use((ctx, next) => {
     const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
