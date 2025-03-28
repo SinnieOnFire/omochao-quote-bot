@@ -15,7 +15,8 @@ if (cluster.isMaster) {
   const { setupMaster } = require('./master')
 
   const bot = new Telegraf(BOT_TOKEN, {
-    handlerTimeout: 100
+    handlerTimeout: 100,
+    username: 'soniccisquotes_bot'
   })
 
   if (!(bot instanceof Telegraf)) {
