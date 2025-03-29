@@ -200,7 +200,7 @@ bot.command('ping', handlePing)
 
 bot.command('qtop', onlyGroup, handleTopQuote)
 bot.command(
-  'qrand',
+  ['kick', 'qrand'], 
   onlyGroup,
   rateLimit({
     window: 1000 * 50,
