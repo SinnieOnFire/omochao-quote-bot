@@ -75,7 +75,7 @@ module.exports = async (ctx) => {
     
     // Use randomInt from crypto for better randomness if available, or fallback to Math.random
     const randomIndex = typeof randomInt === 'function' 
-      ? randomInt(0, quoteIds.length) 
+      ? randomInt(0, quoteIds.length - 1) // Fixed the potential off-by-one error
       : Math.floor(Math.random() * quoteIds.length);
       
     const quoteId = quoteIds[randomIndex];
@@ -100,18 +100,25 @@ module.exports = async (ctx) => {
     messageText += `<b>Дата:</b> ${formattedDate}\n\n`;
     messageText += sanitizeText(quote.text) || '[Не содержит текст]';
     
-    // Add additional info based on quote type
+    // Send the message based on quote type
     if (quote.photo) {
-      messageText += '\n\n<i>В оригинальном сообщении была картинка</i>';
-    } else if (quote.reply_to_message) {
-      messageText += '\n\n<i>Это был ответ на другое сообщение</i>';
+        // Send photo with caption
+        await ctx.replyWithPhoto(
+            quote.photo.file_id, 
+            {
+                caption: messageText,
+                parse_mode: 'HTML',
+                reply_to_message_id: ctx.message.message_id,
+                allow_sending_without_reply: true
+            }
+        );
+    } else {
+        // Send text only
+        await ctx.replyWithHTML(messageText, {
+            reply_to_message_id: ctx.message.message_id,
+            allow_sending_without_reply: true
+        });
     }
-    
-    // Send the message
-    await ctx.replyWithHTML(messageText, {
-      reply_to_message_id: ctx.message.message_id,
-      allow_sending_without_reply: true
-    });
     
   } catch (error) {
     console.error('Error in retroq handler:', error);
