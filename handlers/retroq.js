@@ -4,7 +4,7 @@ const { randomInt } = require('crypto');
 
 // Use an absolute path or environment variable for the quotes file
 // You can set this as an environment variable in your .env file
-const RETRO_QUOTES_PATH = process.env.RETRO_QUOTES_PATH || '/app/quotes/quotes.json';
+const RETRO_QUOTES_PATH = process.env.RETRO_QUOTES_PATH || '/root/quotes/quotes.json';
 
 // Cache for the quotes to avoid reading the file on every request
 let quotesCache = null;
