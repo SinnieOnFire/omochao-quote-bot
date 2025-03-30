@@ -24,5 +24,6 @@ module.exports = {
   handleDonate: require('./donate'),
   handlePing: require('./ping'),
   handleChatMember: require('./chat-member'),
-  handleInlineQuery: require('./inline-query')
+  handleInlineQuery: require('./inline-query'),
+  handleRetroQuote: require('./retroq')
 }
