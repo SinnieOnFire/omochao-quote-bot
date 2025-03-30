@@ -92,10 +92,10 @@ module.exports = async (ctx) => {
     // Build the message - sanitize the text to prevent HTML parsing errors
     let messageText = `<b>Старая цитата #${quoteId}</b>\n`;
     if (parseInt(quoteId) < 0) {
-        messageText += '\n\n<i>Цитата из IRC</i>';
-      } else {
-        messageText += '\n\n<i>Цитата из Telegram</i>';
-      }
+        messageText += '<i>Цитата из IRC</i>\n';
+    } else {
+        messageText += '<i>Цитата из Telegram</i>\n';
+    }
     messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '<i>кто-то</i>'}\n`;
     messageText += `<b>Дата:</b> ${formattedDate}\n\n`;
     messageText += sanitizeText(quote.text) || '[Не содержит текст]';
