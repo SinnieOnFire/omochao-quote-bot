@@ -1,11 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const { randomInt } = require('crypto');
-const os = require('os');
 
-// Path to your retro quotes JSON file
-// Using os.homedir() to get the home directory path for ~
-const RETRO_QUOTES_PATH = path.join(os.homedir(), 'quotes/quotes.json');
+// Use an absolute path or environment variable for the quotes file
+// You can set this as an environment variable in your .env file
+const RETRO_QUOTES_PATH = process.env.RETRO_QUOTES_PATH || '/app/quotes/quotes.json';
 
 // Cache for the quotes to avoid reading the file on every request
 let quotesCache = null;
@@ -23,12 +22,19 @@ async function loadQuotes() {
     return quotesCache;
   }
   
+  console.log(`Attempting to load retro quotes from: ${RETRO_QUOTES_PATH}`);
+  
   // Read and parse the JSON file
   try {
+    // Check if file exists first
+    if (!fs.existsSync(RETRO_QUOTES_PATH)) {
+      throw new Error(`Quotes file not found at ${RETRO_QUOTES_PATH}`);
+    }
+    
     const data = await fs.promises.readFile(RETRO_QUOTES_PATH, 'utf8');
     quotesCache = JSON.parse(data);
     lastCacheTime = currentTime;
-    console.log(`Loaded ${Object.keys(quotesCache).length} retro quotes from ${RETRO_QUOTES_PATH}`);
+    console.log(`Successfully loaded ${Object.keys(quotesCache).length} retro quotes from ${RETRO_QUOTES_PATH}`);
     return quotesCache;
   } catch (error) {
     console.error(`Error loading retro quotes from ${RETRO_QUOTES_PATH}:`, error);
@@ -104,7 +110,7 @@ module.exports = async (ctx) => {
     }
   } catch (error) {
     console.error('Error sending retro quote:', error);
-    await ctx.replyWithHTML(`Error fetching retro quote: ${error.message}. Please try again later.`, {
+    await ctx.replyWithHTML(`Error fetching retro quote. Please check server logs for details.`, {
       reply_to_message_id: ctx.message.message_id,
       allow_sending_without_reply: true
     });
