@@ -10,5 +10,3 @@ COPY package.json package-lock.json ./
 RUN npm install && npm install sharp@0.30.5 && npm install tdl-tdlib-addon --build-from-source
 
 ADD . $NODE_WORKDIR
-
-COPY quotes.json /app/quotes.json

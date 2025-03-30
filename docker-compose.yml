@@ -6,6 +6,8 @@ services:
             context: .
         env_file: .env
         restart: always
+        volumes:
+            - /root/quotes/quotes.json:/app/quotes.json
         logging:
             driver: "json-file"
             options:
@@ -36,4 +38,3 @@ volumes:
 networks:
     quotly:
         external: true
-        
