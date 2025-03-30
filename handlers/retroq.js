@@ -56,7 +56,10 @@ module.exports = async (ctx) => {
     }
     
     // Use randomInt from crypto for better randomness if available, or fallback to Math.random
-    const randomIndex = randomInt ? randomInt(0, quoteIds.length) : Math.floor(Math.random() * quoteIds.length);
+    const randomIndex = typeof randomInt === 'function' 
+      ? randomInt(0, quoteIds.length) 
+      : Math.floor(Math.random() * quoteIds.length);
+      
     const quoteId = quoteIds[randomIndex];
     const quote = quotes[quoteId];
     
