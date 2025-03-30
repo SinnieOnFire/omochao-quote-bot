@@ -3,13 +3,20 @@ const { randomInt } = require('crypto');
 
 /**
  * Sanitize text to prevent HTML parsing errors
- * Replaces < and > with HTML entities when they appear to be IRC-style nicknames
+ * Handles various IRC-style formats and HTML special characters
  */
 function sanitizeText(text) {
   if (!text) return '';
   
-  // Replace IRC-style nicknames like <username> with escaped versions
-  return text.replace(/<([^>]+)>/g, '&lt;$1&gt;');
+  // First, replace all HTML special characters with their entities
+  let sanitized = text
+    .replace(/&/g, '&amp;')    // & -> &amp;
+    .replace(/</g, '&lt;')     // < -> &lt;
+    .replace(/>/g, '&gt;')     // > -> &gt;
+    .replace(/"/g, '&quot;')   // " -> &quot;
+    .replace(/'/g, '&#039;');  // ' -> &#039;
+  
+  return sanitized;
 }
 
 /**
@@ -25,7 +32,7 @@ module.exports = async (ctx) => {
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       console.error(`Quotes file not found at ${filePath}`);
-      return ctx.replyWithHTML(`Error: Quotes file not found.`, {
+      return ctx.replyWithHTML(`Ошибка: цитатник не найден.`, {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
       });
@@ -38,7 +45,7 @@ module.exports = async (ctx) => {
       console.log(`Successfully read quotes file, size: ${data.length} bytes`);
     } catch (readError) {
       console.error(`Error reading quotes file: ${readError.message}`);
-      return ctx.replyWithHTML(`Error reading quotes file.`, {
+      return ctx.replyWithHTML(`Ошибка чтения цитатника.`, {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
       });
@@ -51,7 +58,7 @@ module.exports = async (ctx) => {
       console.log(`Successfully parsed JSON with ${Object.keys(quotes).length} quotes`);
     } catch (parseError) {
       console.error(`Error parsing JSON: ${parseError.message}`);
-      return ctx.replyWithHTML(`Error parsing quotes file JSON.`, {
+      return ctx.replyWithHTML(`Ошибка чтения файла цитатника.`, {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
       });
@@ -60,7 +67,7 @@ module.exports = async (ctx) => {
     // Get a random quote
     const quoteIds = Object.keys(quotes);
     if (quoteIds.length === 0) {
-      return ctx.replyWithHTML('No quotes found in the file!', {
+      return ctx.replyWithHTML('Цитат не найдено!', {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
       });
@@ -84,15 +91,15 @@ module.exports = async (ctx) => {
     
     // Build the message - sanitize the text to prevent HTML parsing errors
     let messageText = `<b>Старая цитата #${quoteId}</b>\n`;
-    messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || 'хз'}\n`;
+    messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || 'кто-то'}\n`;
     messageText += `<b>Дата:</b> ${formattedDate}\n\n`;
-    messageText += sanitizeText(quote.text) || '[No text content]';
+    messageText += sanitizeText(quote.text) || '[Не содержит текст]';
     
     // Add additional info based on quote type
     if (quote.photo) {
-      messageText += '\n\n<i>This quote originally included an image</i>';
+      messageText += '\n\n<i>В оригинальном сообщении была картинка</i>';
     } else if (quote.reply_to_message) {
-      messageText += '\n\n<i>This was a reply to another message</i>';
+      messageText += '\n\n<i>Это был ответ на другое сообщение</i>';
     }
     
     // Send the message
@@ -103,7 +110,7 @@ module.exports = async (ctx) => {
     
   } catch (error) {
     console.error('Error in retroq handler:', error);
-    await ctx.replyWithHTML(`Error fetching retro quote.`, {
+    await ctx.replyWithHTML(`Ошибка обращения к цитатнику.`, {
       reply_to_message_id: ctx.message.message_id,
       allow_sending_without_reply: true
     });
