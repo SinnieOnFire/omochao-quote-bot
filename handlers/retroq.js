@@ -3,20 +3,16 @@ const { randomInt } = require('crypto');
 
 /**
  * Sanitize text to prevent HTML parsing errors
- * Handles various IRC-style formats and HTML special characters
  */
 function sanitizeText(text) {
   if (!text) return '';
   
-  // First, replace all HTML special characters with their entities
-  let sanitized = text
-    .replace(/&/g, '&amp;')    // & -> &amp;
-    .replace(/</g, '&lt;')     // < -> &lt;
-    .replace(/>/g, '&gt;')     // > -> &gt;
-    .replace(/"/g, '&quot;')   // " -> &quot;
-    .replace(/'/g, '&#039;');  // ' -> &#039;
-  
-  return sanitized;
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 /**
@@ -24,12 +20,10 @@ function sanitizeText(text) {
  */
 module.exports = async (ctx) => {
   try {
-    // Show typing indicator
     await ctx.replyWithChatAction('typing');
     
     const filePath = '/app/quotes.json';
     
-    // Check if file exists
     if (!fs.existsSync(filePath)) {
       console.error(`Quotes file not found at ${filePath}`);
       return ctx.replyWithHTML(`Ошибка: цитатник не найден.`, {
@@ -38,7 +32,6 @@ module.exports = async (ctx) => {
       });
     }
     
-    // Read the file
     let data;
     try {
       data = fs.readFileSync(filePath, 'utf8');
@@ -51,7 +44,6 @@ module.exports = async (ctx) => {
       });
     }
     
-    // Parse the JSON
     let quotes;
     try {
       quotes = JSON.parse(data);
@@ -64,7 +56,6 @@ module.exports = async (ctx) => {
       });
     }
     
-    // Get a random quote
     const quoteIds = Object.keys(quotes);
     if (quoteIds.length === 0) {
       return ctx.replyWithHTML('Цитат не найдено!', {
@@ -73,7 +64,6 @@ module.exports = async (ctx) => {
       });
     }
     
-    // Use randomInt from crypto for better randomness if available, or fallback to Math.random
     const randomIndex = typeof randomInt === 'function' 
       ? randomInt(0, quoteIds.length - 1)
       : Math.floor(Math.random() * quoteIds.length);
@@ -83,21 +73,32 @@ module.exports = async (ctx) => {
     
     // Format the date
     const date = new Date(quote.time * 1000);
-    const formattedDate = date.toLocaleDateString('en-US', { 
+    const formattedDate = date.toLocaleDateString('ru-RU', { 
       year: 'numeric', 
-      month: 'short', 
+      month: 'long', 
       day: 'numeric' 
     });
     
-    // Build the message - sanitize the text to prevent HTML parsing errors
+    // Build the message
     let messageText = `<b>Старая цитата #${quoteId}</b>\n`;
+    
+    // Determine quote source
     if (parseInt(quoteId) < 0) {
         messageText += '<i>Цитата из IRC</i>\n';
     } else {
         messageText += '<i>Цитата из Telegram</i>\n';
     }
+    
     messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '<i>кто-то</i>'}\n`;
-    messageText += `<b>Дата:</b> ${formattedDate}\n\n`;
+    messageText += `<b>Дата:</b> ${formattedDate}\n`;
+    
+    // Add deletion info if present
+    if (quote.deleted && Object.keys(quote.deleted).length > 0) {
+        const deletionCount = Object.keys(quote.deleted).length;
+        messageText += `<b>Удалений:</b> ${deletionCount}\n`;
+    }
+    
+    messageText += '\n';
     
     // Add the quote text if it exists
     if (quote.text && quote.text.trim()) {
@@ -105,13 +106,13 @@ module.exports = async (ctx) => {
     } else {
         // If there's no text but there's a photo, note that this is a photo quote
         if (quote.photo) {
-            messageText += '<i>[Фото цитата - оригинальное изображение недоступно]</i>';
+            messageText += '<i>[В цитате была картинка которая больше не доступна]</i>';
         } else {
             messageText += '[Не содержит текст]';
         }
     }
     
-    // Reply with the message - always use text-only since file_ids are invalid
+    // Reply with the message
     await ctx.replyWithHTML(messageText, {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
