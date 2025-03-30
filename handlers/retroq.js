@@ -75,7 +75,7 @@ module.exports = async (ctx) => {
     
     // Use randomInt from crypto for better randomness if available, or fallback to Math.random
     const randomIndex = typeof randomInt === 'function' 
-      ? randomInt(0, quoteIds.length - 1) // Fixed the potential off-by-one error
+      ? randomInt(0, quoteIds.length - 1)
       : Math.floor(Math.random() * quoteIds.length);
       
     const quoteId = quoteIds[randomIndex];
@@ -98,31 +98,28 @@ module.exports = async (ctx) => {
     }
     messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '<i>кто-то</i>'}\n`;
     messageText += `<b>Дата:</b> ${formattedDate}\n\n`;
-    messageText += sanitizeText(quote.text) || '[Не содержит текст]';
     
-    // Send the message based on quote type
-    if (quote.photo) {
-        // Send photo with caption
-        await ctx.replyWithPhoto(
-            quote.photo.file_id, 
-            {
-                caption: messageText,
-                parse_mode: 'HTML',
-                reply_to_message_id: ctx.message.message_id,
-                allow_sending_without_reply: true
-            }
-        );
+    // Add the quote text if it exists
+    if (quote.text && quote.text.trim()) {
+        messageText += sanitizeText(quote.text);
     } else {
-        // Send text only
-        await ctx.replyWithHTML(messageText, {
-            reply_to_message_id: ctx.message.message_id,
-            allow_sending_without_reply: true
-        });
+        // If there's no text but there's a photo, note that this is a photo quote
+        if (quote.photo) {
+            messageText += '<i>[Фото цитата - оригинальное изображение недоступно]</i>';
+        } else {
+            messageText += '[Не содержит текст]';
+        }
     }
+    
+    // Reply with the message - always use text-only since file_ids are invalid
+    await ctx.replyWithHTML(messageText, {
+        reply_to_message_id: ctx.message.message_id,
+        allow_sending_without_reply: true
+    });
     
   } catch (error) {
     console.error('Error in retroq handler:', error);
-    await ctx.replyWithHTML(`Ошибка обращения к цитатнику.`, {
+    await ctx.replyWithHTML(`Ошибка обращения к цитатнику: ${error.message}`, {
       reply_to_message_id: ctx.message.message_id,
       allow_sending_without_reply: true
     });
