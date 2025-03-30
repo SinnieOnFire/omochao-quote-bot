@@ -97,7 +97,7 @@ module.exports = async (ctx) => {
     } else {
         // If there's no text but there's a photo, note that this is a photo quote
         if (quote.photo) {
-            messageText += '<i>[В цитате была картинка которая больше не доступна]</i>';
+            messageText += '<i>[В цитате была картинка которая больше недоступна]</i>';
         } else {
             messageText += '[Не содержит текст]';
         }
