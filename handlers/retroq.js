@@ -38,7 +38,7 @@ module.exports = async (ctx) => {
       console.log(`Successfully read quotes file, size: ${data.length} bytes`);
     } catch (readError) {
       console.error(`Error reading quotes file: ${readError.message}`);
-      return ctx.replyWithHTML(`Ошибка чтения цитатника.`, {
+      return ctx.replyWithHTML(`Ошибка чтения файла цитатника.`, {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
       });
@@ -50,7 +50,7 @@ module.exports = async (ctx) => {
       console.log(`Successfully parsed JSON with ${Object.keys(quotes).length} quotes`);
     } catch (parseError) {
       console.error(`Error parsing JSON: ${parseError.message}`);
-      return ctx.replyWithHTML(`Ошибка чтения файла цитатника.`, {
+      return ctx.replyWithHTML(`Ошибка парсинга файла цитатника.`, {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
       });
@@ -90,16 +90,7 @@ module.exports = async (ctx) => {
     }
     
     messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '<i>кто-то</i>'}\n`;
-    messageText += `<b>Дата:</b> ${formattedDate}\n`;
-    
-    // Add deletion info if present
-    if (quote.deleted && Object.keys(quote.deleted).length > 0) {
-        const deletionCount = Object.keys(quote.deleted).length;
-        messageText += `<b>Удалений:</b> ${deletionCount}\n`;
-    }
-    
-    messageText += '\n';
-    
+    messageText += `<b>Дата:</b> ${formattedDate}\n`;    
     // Add the quote text if it exists
     if (quote.text && quote.text.trim()) {
         messageText += sanitizeText(quote.text);
