@@ -2,6 +2,17 @@ const fs = require('fs');
 const { randomInt } = require('crypto');
 
 /**
+ * Sanitize text to prevent HTML parsing errors
+ * Replaces < and > with HTML entities when they appear to be IRC-style nicknames
+ */
+function sanitizeText(text) {
+  if (!text) return '';
+  
+  // Replace IRC-style nicknames like <username> with escaped versions
+  return text.replace(/<([^>]+)>/g, '&lt;$1&gt;');
+}
+
+/**
  * Sends a random quote from the retro quotes JSON file
  */
 module.exports = async (ctx) => {
@@ -71,11 +82,11 @@ module.exports = async (ctx) => {
       day: 'numeric' 
     });
     
-    // Build the message
-    let messageText = `<b>Retro Quote #${quoteId}</b>\n`;
-    messageText += `<b>From:</b> ${quote.from || 'Unknown'}\n`;
-    messageText += `<b>Date:</b> ${formattedDate}\n\n`;
-    messageText += quote.text || '[No text content]';
+    // Build the message - sanitize the text to prevent HTML parsing errors
+    let messageText = `<b>Старая цитата #${quoteId}</b>\n`;
+    messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || 'хз'}\n`;
+    messageText += `<b>Дата:</b> ${formattedDate}\n\n`;
+    messageText += sanitizeText(quote.text) || '[No text content]';
     
     // Add additional info based on quote type
     if (quote.photo) {
