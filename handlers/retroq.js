@@ -9,7 +9,7 @@ module.exports = async (ctx) => {
     // Show typing indicator
     await ctx.replyWithChatAction('typing');
     
-    const filePath = '/root/quotes/quotes.json';
+    const filePath = '~/quotes/quotes.json';
     
     // Check if file exists
     if (!fs.existsSync(filePath)) {
