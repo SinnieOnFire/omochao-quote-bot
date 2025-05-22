@@ -16,6 +16,14 @@ function sanitizeText(text) {
 }
 
 /**
+ * Check if a quote has accessible text content
+ */
+function hasAccessibleContent(quote) {
+  // Check if quote has text and it's not empty/whitespace only
+  return quote.text && quote.text.trim().length > 0;
+}
+
+/**
  * Sends a random quote from the retro quotes JSON file
  */
 module.exports = async (ctx) => {
@@ -64,11 +72,21 @@ module.exports = async (ctx) => {
       });
     }
     
+    // Filter quotes to only include those with accessible text content
+    const accessibleQuoteIds = quoteIds.filter(id => hasAccessibleContent(quotes[id]));
+    
+    if (accessibleQuoteIds.length === 0) {
+      return ctx.replyWithHTML('Нет доступных цитат с текстом!', {
+        reply_to_message_id: ctx.message.message_id,
+        allow_sending_without_reply: true
+      });
+    }
+    
     const randomIndex = typeof randomInt === 'function' 
-      ? randomInt(0, quoteIds.length - 1)
-      : Math.floor(Math.random() * quoteIds.length);
+      ? randomInt(0, accessibleQuoteIds.length - 1)
+      : Math.floor(Math.random() * accessibleQuoteIds.length);
       
-    const quoteId = quoteIds[randomIndex];
+    const quoteId = accessibleQuoteIds[randomIndex];
     const quote = quotes[quoteId];
     
     // Format the date
@@ -91,17 +109,9 @@ module.exports = async (ctx) => {
     
     messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '<i>кто-то</i>'}\n`;
     messageText += `<b>Дата:</b> ${formattedDate}\n`;    
-    // Add the quote text if it exists
-    if (quote.text && quote.text.trim()) {
-        messageText += sanitizeText(quote.text);
-    } else {
-        // If there's no text but there's a photo, note that this is a photo quote
-        if (quote.photo) {
-            messageText += '<i>[В цитате была картинка которая больше недоступна]</i>';
-        } else {
-            messageText += '[Не содержит текст]';
-        }
-    }
+    
+    // Add the quote text (we know it exists because we filtered for it)
+    messageText += sanitizeText(quote.text);
     
     // Reply with the message
     await ctx.replyWithHTML(messageText, {
