@@ -20,7 +20,23 @@ function sanitizeText(text) {
  */
 function hasAccessibleContent(quote) {
   // Check if quote has text and it's not empty/whitespace only
-  return quote.text && quote.text.trim().length > 0;
+  if (!quote.text || quote.text.trim().length === 0) {
+    return false;
+  }
+  
+  // Check if the quote only contains a reply to a message with media but no text
+  if (quote.reply_to_message && 
+      (quote.reply_to_message.animation || 
+       quote.reply_to_message.document || 
+       quote.reply_to_message.photo ||
+       quote.reply_to_message.video ||
+       quote.reply_to_message.sticker) &&
+      (!quote.reply_to_message.text || quote.reply_to_message.text.trim().length === 0) &&
+      (!quote.reply_to_message.caption || quote.reply_to_message.caption.trim().length === 0)) {
+    return false;
+  }
+  
+  return true;
 }
 
 /**
