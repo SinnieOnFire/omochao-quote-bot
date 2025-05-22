@@ -1,6 +1,10 @@
 const fs = require('fs');
 const { randomInt } = require('crypto');
 
+// Store recently sent quotes per chat to prevent duplicates
+const recentQuotes = new Map();
+const MAX_RECENT_QUOTES = 50; // Number of recent quotes to track per chat
+
 /**
  * Sanitize text to prevent HTML parsing errors
  */
@@ -40,12 +44,60 @@ function hasAccessibleContent(quote) {
 }
 
 /**
+ * Get recent quotes for a chat
+ */
+function getRecentQuotes(chatId) {
+  return recentQuotes.get(chatId) || [];
+}
+
+/**
+ * Add quote to recent quotes for a chat
+ */
+function addRecentQuote(chatId, quoteId) {
+  let recent = recentQuotes.get(chatId) || [];
+  
+  // Add the new quote ID to the beginning
+  recent.unshift(quoteId);
+  
+  // Keep only the most recent quotes
+  if (recent.length > MAX_RECENT_QUOTES) {
+    recent = recent.slice(0, MAX_RECENT_QUOTES);
+  }
+  
+  recentQuotes.set(chatId, recent);
+}
+
+/**
+ * Get a random quote that hasn't been sent recently
+ */
+function getRandomUniqueQuote(accessibleQuoteIds, recentQuoteIds) {
+  // Filter out recently sent quotes
+  const availableQuotes = accessibleQuoteIds.filter(id => !recentQuoteIds.includes(id));
+  
+  // If we've exhausted all quotes, reset and use all quotes again
+  if (availableQuotes.length === 0) {
+    console.log('All quotes have been sent recently, resetting for chat');
+    return accessibleQuoteIds[typeof randomInt === 'function' 
+      ? randomInt(0, accessibleQuoteIds.length - 1)
+      : Math.floor(Math.random() * accessibleQuoteIds.length)];
+  }
+  
+  // Return a random quote from available quotes
+  const randomIndex = typeof randomInt === 'function' 
+    ? randomInt(0, availableQuotes.length - 1)
+    : Math.floor(Math.random() * availableQuotes.length);
+    
+  return availableQuotes[randomIndex];
+}
+
+/**
  * Sends a random quote from the retro quotes JSON file
  */
 module.exports = async (ctx) => {
   try {
     await ctx.replyWithChatAction('typing');
     
+    const chatId = ctx.chat.id;
     const filePath = '/app/quotes.json';
     
     if (!fs.existsSync(filePath)) {
@@ -98,12 +150,15 @@ module.exports = async (ctx) => {
       });
     }
     
-    const randomIndex = typeof randomInt === 'function' 
-      ? randomInt(0, accessibleQuoteIds.length - 1)
-      : Math.floor(Math.random() * accessibleQuoteIds.length);
-      
-    const quoteId = accessibleQuoteIds[randomIndex];
+    // Get recent quotes for this chat
+    const recentQuoteIds = getRecentQuotes(chatId);
+    
+    // Get a unique quote that hasn't been sent recently
+    const quoteId = getRandomUniqueQuote(accessibleQuoteIds, recentQuoteIds);
     const quote = quotes[quoteId];
+    
+    // Add this quote to recent quotes
+    addRecentQuote(chatId, quoteId);
     
     // Format the date
     const date = new Date(quote.time * 1000);
