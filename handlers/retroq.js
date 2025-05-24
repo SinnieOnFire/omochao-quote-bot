@@ -1,5 +1,3 @@
-console.log('[RETROQ] Module loading...');
-
 const fs = require('fs');
 const { randomInt } = require('crypto');
 const Redis = require('ioredis');
@@ -12,10 +10,6 @@ const redis = new Redis({
 
 redis.on('error', (err) => {
   console.error('[RETROQ] Redis connection error:', err);
-});
-
-redis.on('connect', () => {
-  console.log('[RETROQ] Redis connected successfully');
 });
 
 // Store recently sent quotes per chat to prevent duplicates
@@ -144,7 +138,6 @@ async function checkRateLimit(userId) {
  * Sends a random quote from the retro quotes JSON file
  */
 module.exports = async (ctx) => {
-  console.log('[RETROQ] Handler called');
   try {
     // Check rate limit
     const userId = ctx.from?.id;
@@ -152,16 +145,12 @@ module.exports = async (ctx) => {
       console.error('[RETROQ] No user ID found in context');
       return;
     }
-    console.log(`[RETROQ] User ${userId} requesting quote`);
     const rateCheck = await checkRateLimit(userId);
-    console.log(`[RETROQ] Rate check for user ${userId}:`, rateCheck);
     
     if (!rateCheck.allowed) {
       const minutes = Math.floor(rateCheck.timeLeft / 60);
       const seconds = rateCheck.timeLeft % 60;
       const timeString = minutes > 0 ? `${minutes} мин. ${seconds} сек.` : `${seconds} сек.`;
-      
-      console.log(`[RETROQ] User ${userId} rate limited for ${timeString}`);
       
       return ctx.replyWithHTML(
         `⏳ <i>Слишком много запросов! Подождите ${timeString} перед следующим использованием команды.</i>`,
