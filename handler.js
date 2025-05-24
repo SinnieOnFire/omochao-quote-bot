@@ -250,7 +250,7 @@ bot.command('retroq', rateLimit({
   window: 1000 * 60 * 5, // 5 minutes window
   limit: 10, // 10 uses within 5 minutes
   keyGenerator: (ctx) => ctx.from.id,
-  onLimitExceeded: (ctx, next) => {
+  onLimitExceeded: (ctx) => {
     ctx.replyWithHTML('⏳ <i>Слишком много запросов! Подождите 5 минут перед следующим использованием команды.</i>', {
       reply_to_message_id: ctx.message.message_id,
       allow_sending_without_reply: true
@@ -260,7 +260,6 @@ bot.command('retroq', rateLimit({
         ctx.deleteMessage(msg.message_id).catch(() => {})
       }, 5000)
     })
-    // Don't call next() to stop the command from executing
   }
 }), handleRetroQuote)
 
