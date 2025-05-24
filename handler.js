@@ -246,22 +246,25 @@ bot.hears(/^\/(qgab) (\d+)/, onlyGroup, onlyAdmin, handleGabSettings)
 bot.hears(/^\/(qrate)/, onlyGroup, onlyAdmin, handleSettingsRate)
 bot.action(/^(rate):(👍|👎)/, handleRate)
 bot.action(/^(irate):(.*):(👍|👎)/, handleRate)
-bot.command('retroq', rateLimit({
-  window: 1000 * 60 * 5, // 5 minutes window
-  limit: 10, // 10 uses within 5 minutes
-  keyGenerator: (ctx) => ctx.from.id,
-  onLimitExceeded: (ctx) => {
-    ctx.replyWithHTML('⏳ <i>Слишком много запросов! Подождите 5 минут перед следующим использованием команды.</i>', {
-      reply_to_message_id: ctx.message.message_id,
-      allow_sending_without_reply: true
-    }).then((msg) => {
-      setTimeout(() => {
-        ctx.deleteMessage().catch(() => {})
-        ctx.deleteMessage(msg.message_id).catch(() => {})
-      }, 5000)
-    })
-  }
-}), handleRetroQuote)
+bot.command('retroq', 
+  rateLimit({
+    window: 1000 * 60 * 5, // 5 minutes window
+    limit: 10, // 10 uses within 5 minutes
+    keyGenerator: (ctx) => ctx.from.id,
+    onLimitExceeded: (ctx) => {
+      return ctx.replyWithHTML('⏳ <i>Слишком много запросов! Подождите 5 минут перед следующим использованием команды.</i>', {
+        reply_to_message_id: ctx.message.message_id,
+        allow_sending_without_reply: true
+      }).then((msg) => {
+        setTimeout(() => {
+          ctx.deleteMessage().catch(() => {})
+          ctx.deleteMessage(msg.message_id).catch(() => {})
+        }, 5000)
+      })
+    }
+  }), 
+  handleRetroQuote
+)
 
 // bot.on('new_chat_members', (ctx, next) => {
 //   if (ctx.message.new_chat_member.id === ctx.botInfo.id) return handleHelp(ctx)
