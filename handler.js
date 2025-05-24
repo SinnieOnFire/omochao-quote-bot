@@ -5,6 +5,8 @@ const session = require('telegraf/session')
 const rateLimit = require('telegraf-ratelimit')
 const I18n = require('telegraf-i18n')
 const { onlyGroup, onlyAdmin } = require('./middlewares')
+
+console.log('[HANDLER] Loading handler.js...')
 const {
   handleStart,
   handleHelp,
@@ -246,6 +248,7 @@ bot.hears(/^\/(qgab) (\d+)/, onlyGroup, onlyAdmin, handleGabSettings)
 bot.hears(/^\/(qrate)/, onlyGroup, onlyAdmin, handleSettingsRate)
 bot.action(/^(rate):(👍|👎)/, handleRate)
 bot.action(/^(irate):(.*):(👍|👎)/, handleRate)
+console.log('[HANDLER] Registering retroq command, handler:', typeof handleRetroQuote)
 bot.command('retroq', handleRetroQuote)
 
 // bot.on('new_chat_members', (ctx, next) => {
