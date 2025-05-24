@@ -131,12 +131,16 @@ module.exports = async (ctx) => {
   try {
     // Check rate limit
     const userId = ctx.from.id;
+    console.log(`[RETROQ] User ${userId} requesting quote`);
     const rateCheck = checkRateLimit(userId);
+    console.log(`[RETROQ] Rate check for user ${userId}:`, rateCheck);
     
     if (!rateCheck.allowed) {
       const minutes = Math.floor(rateCheck.timeLeft / 60);
       const seconds = rateCheck.timeLeft % 60;
       const timeString = minutes > 0 ? `${minutes} мин. ${seconds} сек.` : `${seconds} сек.`;
+      
+      console.log(`[RETROQ] User ${userId} rate limited for ${timeString}`);
       
       return ctx.replyWithHTML(
         `⏳ <i>Слишком много запросов! Подождите ${timeString} перед следующим использованием команды.</i>`,
