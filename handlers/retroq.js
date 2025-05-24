@@ -5,6 +5,11 @@ const { randomInt } = require('crypto');
 const recentQuotes = new Map();
 const MAX_RECENT_QUOTES = 50; // Number of recent quotes to track per chat
 
+// Rate limiting
+const userRateLimits = new Map();
+const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
+const RATE_LIMIT_MAX_USES = 10;
+
 /**
  * Sanitize text to prevent HTML parsing errors
  */
@@ -91,10 +96,62 @@ function getRandomUniqueQuote(accessibleQuoteIds, recentQuoteIds) {
 }
 
 /**
+ * Check if user is rate limited
+ */
+function checkRateLimit(userId) {
+  const now = Date.now();
+  const userLimit = userRateLimits.get(userId) || { uses: [], blockedUntil: 0 };
+  
+  // Check if user is currently blocked
+  if (userLimit.blockedUntil > now) {
+    return { allowed: false, timeLeft: Math.ceil((userLimit.blockedUntil - now) / 1000) };
+  }
+  
+  // Remove uses outside the window
+  userLimit.uses = userLimit.uses.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
+  
+  // Check if limit exceeded
+  if (userLimit.uses.length >= RATE_LIMIT_MAX_USES) {
+    userLimit.blockedUntil = now + RATE_LIMIT_WINDOW;
+    userRateLimits.set(userId, userLimit);
+    return { allowed: false, timeLeft: Math.ceil(RATE_LIMIT_WINDOW / 1000) };
+  }
+  
+  // Add current use
+  userLimit.uses.push(now);
+  userRateLimits.set(userId, userLimit);
+  
+  return { allowed: true };
+}
+
+/**
  * Sends a random quote from the retro quotes JSON file
  */
 module.exports = async (ctx) => {
   try {
+    // Check rate limit
+    const userId = ctx.from.id;
+    const rateCheck = checkRateLimit(userId);
+    
+    if (!rateCheck.allowed) {
+      const minutes = Math.floor(rateCheck.timeLeft / 60);
+      const seconds = rateCheck.timeLeft % 60;
+      const timeString = minutes > 0 ? `${minutes} мин. ${seconds} сек.` : `${seconds} сек.`;
+      
+      return ctx.replyWithHTML(
+        `⏳ <i>Слишком много запросов! Подождите ${timeString} перед следующим использованием команды.</i>`,
+        {
+          reply_to_message_id: ctx.message.message_id,
+          allow_sending_without_reply: true
+        }
+      ).then((msg) => {
+        setTimeout(() => {
+          ctx.deleteMessage().catch(() => {});
+          ctx.deleteMessage(msg.message_id).catch(() => {});
+        }, 5000);
+      });
+    }
+    
     await ctx.replyWithChatAction('typing');
     
     const chatId = ctx.chat.id;
