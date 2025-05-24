@@ -1,13 +1,19 @@
 const fs = require('fs');
 const { randomInt } = require('crypto');
+const Redis = require('ioredis');
+
+// Initialize Redis client
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'redis',
+  port: process.env.REDIS_PORT || 6379
+});
 
 // Store recently sent quotes per chat to prevent duplicates
 const recentQuotes = new Map();
 const MAX_RECENT_QUOTES = 50; // Number of recent quotes to track per chat
 
 // Rate limiting
-const userRateLimits = new Map();
-const RATE_LIMIT_WINDOW = 5 * 60 * 1000; // 5 minutes in milliseconds
+const RATE_LIMIT_WINDOW = 5 * 60; // 5 minutes in seconds
 const RATE_LIMIT_MAX_USES = 10;
 
 /**
@@ -96,32 +102,32 @@ function getRandomUniqueQuote(accessibleQuoteIds, recentQuoteIds) {
 }
 
 /**
- * Check if user is rate limited
+ * Check if user is rate limited using Redis
  */
-function checkRateLimit(userId) {
-  const now = Date.now();
-  const userLimit = userRateLimits.get(userId) || { uses: [], blockedUntil: 0 };
+async function checkRateLimit(userId) {
+  const key = `retroq_rate:${userId}`;
   
-  // Check if user is currently blocked
-  if (userLimit.blockedUntil > now) {
-    return { allowed: false, timeLeft: Math.ceil((userLimit.blockedUntil - now) / 1000) };
+  try {
+    // Use Redis INCR with expiry to implement rate limiting
+    const current = await redis.incr(key);
+    
+    if (current === 1) {
+      // First request in the window, set expiry
+      await redis.expire(key, RATE_LIMIT_WINDOW);
+    }
+    
+    if (current > RATE_LIMIT_MAX_USES) {
+      // Get remaining TTL
+      const ttl = await redis.ttl(key);
+      return { allowed: false, timeLeft: ttl > 0 ? ttl : RATE_LIMIT_WINDOW };
+    }
+    
+    return { allowed: true, uses: current };
+  } catch (error) {
+    console.error('[RETROQ] Redis error:', error);
+    // Fallback - allow the request if Redis fails
+    return { allowed: true };
   }
-  
-  // Remove uses outside the window
-  userLimit.uses = userLimit.uses.filter(timestamp => now - timestamp < RATE_LIMIT_WINDOW);
-  
-  // Check if limit exceeded
-  if (userLimit.uses.length >= RATE_LIMIT_MAX_USES) {
-    userLimit.blockedUntil = now + RATE_LIMIT_WINDOW;
-    userRateLimits.set(userId, userLimit);
-    return { allowed: false, timeLeft: Math.ceil(RATE_LIMIT_WINDOW / 1000) };
-  }
-  
-  // Add current use
-  userLimit.uses.push(now);
-  userRateLimits.set(userId, userLimit);
-  
-  return { allowed: true };
 }
 
 /**
@@ -132,7 +138,7 @@ module.exports = async (ctx) => {
     // Check rate limit
     const userId = ctx.from.id;
     console.log(`[RETROQ] User ${userId} requesting quote`);
-    const rateCheck = checkRateLimit(userId);
+    const rateCheck = await checkRateLimit(userId);
     console.log(`[RETROQ] Rate check for user ${userId}:`, rateCheck);
     
     if (!rateCheck.allowed) {
