@@ -171,6 +171,11 @@ module.exports = async (ctx) => {
     const chatId = ctx.chat.id;
     const filePath = '/app/quotes.json';
     
+    // Extract search keywords from command
+    const commandText = ctx.message.text;
+    const commandMatch = commandText.match(/^\/retroq(?:@\S+)?\s*(.*)$/);
+    const searchKeywords = commandMatch && commandMatch[1] ? commandMatch[1].trim().toLowerCase() : '';
+    
     if (!fs.existsSync(filePath)) {
       console.error(`Quotes file not found at ${filePath}`);
       return ctx.replyWithHTML(`Ошибка: цитатник не найден.`, {
@@ -212,7 +217,23 @@ module.exports = async (ctx) => {
     }
     
     // Filter quotes to only include those with accessible text content
-    const accessibleQuoteIds = quoteIds.filter(id => hasAccessibleContent(quotes[id]));
+    let accessibleQuoteIds = quoteIds.filter(id => hasAccessibleContent(quotes[id]));
+    
+    // If search keywords are provided, filter quotes by keywords
+    if (searchKeywords) {
+      accessibleQuoteIds = accessibleQuoteIds.filter(id => {
+        const quote = quotes[id];
+        const quoteText = quote.text ? quote.text.toLowerCase() : '';
+        return quoteText.includes(searchKeywords);
+      });
+      
+      if (accessibleQuoteIds.length === 0) {
+        return ctx.replyWithHTML(`Не найдено цитат, содержащих "${sanitizeText(searchKeywords)}"`, {
+          reply_to_message_id: ctx.message.message_id,
+          allow_sending_without_reply: true
+        });
+      }
+    }
     
     if (accessibleQuoteIds.length === 0) {
       return ctx.replyWithHTML('Нет доступных цитат с текстом!', {
