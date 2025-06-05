@@ -276,7 +276,7 @@ module.exports = async (ctx) => {
     });
     
     // Build the message
-    let messageText = `<b>Старая цитата #${quoteId}</b>\n`;
+    let messageText = `<b>Старая цитата №${quoteId}</b>\n`;
     
     // Determine quote source
     if (parseInt(quoteId) < 0) {
@@ -285,7 +285,7 @@ module.exports = async (ctx) => {
         messageText += '<i>Цитата из Telegram</i>\n';
     }
     
-    messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '<i>кто-то</i>'}\n`;
+    messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '[ДАННЫЕ УДАЛЕНЫ]'}\n`;
     messageText += `<b>Дата:</b> ${formattedDate} ${formattedTime}\n`;    
     
     // Add the quote text (we know it exists because we filtered for it)
