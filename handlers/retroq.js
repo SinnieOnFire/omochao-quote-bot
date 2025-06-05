@@ -92,9 +92,18 @@ function getRandomUniqueQuote(accessibleQuoteIds, recentQuoteIds) {
   // If we've exhausted all quotes, reset and use all quotes again
   if (availableQuotes.length === 0) {
     console.log('All quotes have been sent recently, resetting for chat');
+    // Handle single quote case
+    if (accessibleQuoteIds.length === 1) {
+      return accessibleQuoteIds[0];
+    }
     return accessibleQuoteIds[typeof randomInt === 'function' 
       ? randomInt(0, accessibleQuoteIds.length - 1)
       : Math.floor(Math.random() * accessibleQuoteIds.length)];
+  }
+  
+  // Handle single available quote
+  if (availableQuotes.length === 1) {
+    return availableQuotes[0];
   }
   
   // Return a random quote from available quotes
