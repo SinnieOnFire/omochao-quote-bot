@@ -261,20 +261,6 @@ module.exports = async (ctx) => {
     // Add this quote to recent quotes
     addRecentQuote(chatId, quoteId);
     
-    // Format the date
-    const date = new Date(quote.time * 1000);
-    const formattedDate = date.toLocaleDateString('ru-RU', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-    const formattedTime = date.toLocaleTimeString('ru-RU', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false
-    });
-    
     // Build the message
     let messageText = `<b>Старая цитата №${quoteId}</b>\n`;
     
@@ -286,7 +272,23 @@ module.exports = async (ctx) => {
     }
     
     messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '[ДАННЫЕ УДАЛЕНЫ]'}\n`;
-    messageText += `<b>Дата:</b> ${formattedDate} ${formattedTime}\n`;    
+    
+    // Only add date if time is not 0
+    if (quote.time && quote.time > 0) {
+      const date = new Date(quote.time * 1000);
+      const formattedDate = date.toLocaleDateString('ru-RU', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+      const formattedTime = date.toLocaleTimeString('ru-RU', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+      messageText += `<b>Дата:</b> ${formattedDate} ${formattedTime}\n`;
+    }    
     
     // Add the quote text (we know it exists because we filtered for it)
     messageText += sanitizeText(quote.text);
