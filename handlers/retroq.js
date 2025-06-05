@@ -268,6 +268,12 @@ module.exports = async (ctx) => {
       month: 'long', 
       day: 'numeric' 
     });
+    const formattedTime = date.toLocaleTimeString('ru-RU', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    });
     
     // Build the message
     let messageText = `<b>Старая цитата #${quoteId}</b>\n`;
@@ -280,7 +286,7 @@ module.exports = async (ctx) => {
     }
     
     messageText += `<b>Сохранил:</b> ${sanitizeText(quote.from) || '<i>кто-то</i>'}\n`;
-    messageText += `<b>Дата:</b> ${formattedDate}\n`;    
+    messageText += `<b>Дата:</b> ${formattedDate} ${formattedTime}\n`;    
     
     // Add the quote text (we know it exists because we filtered for it)
     messageText += sanitizeText(quote.text);
