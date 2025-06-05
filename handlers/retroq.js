@@ -18,7 +18,7 @@ const MAX_RECENT_QUOTES = 50; // Number of recent quotes to track per chat
 
 // Rate limiting
 const RATE_LIMIT_WINDOW = 5 * 60; // 5 minutes in seconds
-const RATE_LIMIT_MAX_USES = 10;
+const RATE_LIMIT_MAX_USES = 5;
 
 /**
  * Sanitize text to prevent HTML parsing errors
