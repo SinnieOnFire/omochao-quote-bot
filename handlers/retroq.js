@@ -346,7 +346,8 @@ module.exports = async (ctx) => {
         }
       } catch (photoError) {
         // If photo sending fails (e.g., file_id expired), fall back to text only
-        console.error('Error sending photo:', photoError);
+        console.error('Error sending photo for quote', quoteId, ':', photoError.message || photoError);
+        console.error('Photo details:', quote.photo);
         if (quote.text && quote.text.trim().length > 0) {
           await ctx.replyWithHTML(messageText + '\n<i>[Изображение недоступно]</i>', {
             reply_to_message_id: ctx.message.message_id,
