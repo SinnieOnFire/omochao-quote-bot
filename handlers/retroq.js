@@ -328,7 +328,7 @@ module.exports = async (ctx) => {
       try {
         // If there's both text and photo, send photo with caption
         if (quote.text && quote.text.trim().length > 0) {
-          await ctx.replyWithPhoto(quote.photo.file_id, {
+          await ctx.telegram.sendPhoto(ctx.chat.id, quote.photo.file_id, {
             caption: messageText,
             parse_mode: 'HTML',
             reply_to_message_id: ctx.message.message_id,
@@ -337,7 +337,7 @@ module.exports = async (ctx) => {
         } else {
           // Photo only - add a note that this quote contains only a photo
           messageText += '<i>[Эта цитата содержит только изображение]</i>';
-          await ctx.replyWithPhoto(quote.photo.file_id, {
+          await ctx.telegram.sendPhoto(ctx.chat.id, quote.photo.file_id, {
             caption: messageText,
             parse_mode: 'HTML',
             reply_to_message_id: ctx.message.message_id,
