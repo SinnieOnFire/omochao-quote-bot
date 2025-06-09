@@ -35,27 +35,25 @@ function sanitizeText(text) {
 }
 
 /**
- * Check if a quote has accessible text content
+ * Check if a quote has any displayable content (text or photo)
  */
-function hasAccessibleContent(quote) {
-  // Check if quote has text and it's not empty/whitespace only
-  if (!quote.text || quote.text.trim().length === 0) {
-    return false;
+function hasDisplayableContent(quote) {
+  // Quote has text
+  if (quote.text && quote.text.trim().length > 0) {
+    return true;
   }
   
-  // Check if the quote only contains a reply to a message with media but no text
-  if (quote.reply_to_message && 
-      (quote.reply_to_message.animation || 
-       quote.reply_to_message.document || 
-       quote.reply_to_message.photo ||
-       quote.reply_to_message.video ||
-       quote.reply_to_message.sticker) &&
-      (!quote.reply_to_message.text || quote.reply_to_message.text.trim().length === 0) &&
-      (!quote.reply_to_message.caption || quote.reply_to_message.caption.trim().length === 0)) {
-    return false;
+  // Quote has photo
+  if (quote.photo && quote.photo.file_id) {
+    return true;
   }
   
-  return true;
+  // Quote has other media that we might support in the future
+  if (quote.animation || quote.video || quote.document) {
+    return true;
+  }
+  
+  return false;
 }
 
 /**
@@ -225,8 +223,8 @@ module.exports = async (ctx) => {
       });
     }
     
-    // Filter quotes to only include those with accessible text content
-    let accessibleQuoteIds = quoteIds.filter(id => hasAccessibleContent(quotes[id]));
+    // Filter quotes to only include those with displayable content
+    let accessibleQuoteIds = quoteIds.filter(id => hasDisplayableContent(quotes[id]));
     
     // If search keywords are provided, filter quotes by keywords
     if (searchKeywords) {
@@ -245,7 +243,7 @@ module.exports = async (ctx) => {
     }
     
     if (accessibleQuoteIds.length === 0) {
-      return ctx.replyWithHTML('Нет доступных цитат с текстом!', {
+      return ctx.replyWithHTML('Нет доступных цитат!', {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
       });
@@ -290,14 +288,54 @@ module.exports = async (ctx) => {
       messageText += `<b>Дата:</b> ${formattedDate} ${formattedTime}\n`;
     }    
     
-    // Add the quote text (we know it exists because we filtered for it)
-    messageText += sanitizeText(quote.text);
+    // Add the quote text if it exists
+    if (quote.text && quote.text.trim().length > 0) {
+      messageText += sanitizeText(quote.text);
+    }
     
-    // Reply with the message
-    await ctx.replyWithHTML(messageText, {
+    // Check if quote has a photo
+    if (quote.photo && quote.photo.file_id) {
+      try {
+        // If there's both text and photo, send photo with caption
+        if (quote.text && quote.text.trim().length > 0) {
+          await ctx.replyWithPhoto(quote.photo.file_id, {
+            caption: messageText,
+            parse_mode: 'HTML',
+            reply_to_message_id: ctx.message.message_id,
+            allow_sending_without_reply: true
+          });
+        } else {
+          // Photo only - add a note that this quote contains only a photo
+          messageText += '<i>[Эта цитата содержит только изображение]</i>';
+          await ctx.replyWithPhoto(quote.photo.file_id, {
+            caption: messageText,
+            parse_mode: 'HTML',
+            reply_to_message_id: ctx.message.message_id,
+            allow_sending_without_reply: true
+          });
+        }
+      } catch (photoError) {
+        // If photo sending fails (e.g., file_id expired), fall back to text only
+        console.error('Error sending photo:', photoError);
+        if (quote.text && quote.text.trim().length > 0) {
+          await ctx.replyWithHTML(messageText + '\n<i>[Изображение недоступно]</i>', {
+            reply_to_message_id: ctx.message.message_id,
+            allow_sending_without_reply: true
+          });
+        } else {
+          await ctx.replyWithHTML(messageText + '\n<i>[Изображение недоступно]</i>', {
+            reply_to_message_id: ctx.message.message_id,
+            allow_sending_without_reply: true
+          });
+        }
+      }
+    } else {
+      // Text only quote
+      await ctx.replyWithHTML(messageText, {
         reply_to_message_id: ctx.message.message_id,
         allow_sending_without_reply: true
-    });
+      });
+    }
     
   } catch (error) {
     console.error('Error in retroq handler:', error);
