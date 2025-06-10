@@ -237,14 +237,14 @@ module.exports = async (ctx) => {
       quote = quotes[quoteId];
       
       if (!quote) {
-        return ctx.replyWithHTML(`Цитата #${quoteId} не найдена!`, {
+        return ctx.replyWithHTML(`Цитата №${quoteId} не найдена!`, {
           reply_to_message_id: ctx.message.message_id,
           allow_sending_without_reply: true
         });
       }
       
       if (!hasDisplayableContent(quote)) {
-        return ctx.replyWithHTML(`Цитата #${quoteId} не содержит отображаемого контента!`, {
+        return ctx.replyWithHTML(`Цитата №${quoteId} не содержит отображаемого контента!`, {
           reply_to_message_id: ctx.message.message_id,
           allow_sending_without_reply: true
         });
@@ -262,7 +262,7 @@ module.exports = async (ctx) => {
         });
         
         if (accessibleQuoteIds.length === 0) {
-          return ctx.replyWithHTML(`Не найдено цитат, содержащих "${sanitizeText(searchKeywords)}"`, {
+          return ctx.replyWithHTML(`Не найдено цитат, содержащих «${sanitizeText(searchKeywords)}»`, {
             reply_to_message_id: ctx.message.message_id,
             allow_sending_without_reply: true
           });
@@ -349,12 +349,12 @@ module.exports = async (ctx) => {
         console.error('Error sending photo for quote', quoteId, ':', photoError.message || photoError);
         console.error('Photo details:', quote.photo);
         if (quote.text && quote.text.trim().length > 0) {
-          await ctx.replyWithHTML(messageText + '\n<i>[Изображение недоступно]</i>', {
+          await ctx.replyWithHTML(messageText + '\n<i>[В цитате была картинка которая сейчас недоступна]</i>', {
             reply_to_message_id: ctx.message.message_id,
             allow_sending_without_reply: true
           });
         } else {
-          await ctx.replyWithHTML(messageText + '\n<i>[Изображение недоступно]</i>', {
+          await ctx.replyWithHTML(messageText + '\n<i>[В цитате была картинка которая сейчас недоступна]</i>', {
             reply_to_message_id: ctx.message.message_id,
             allow_sending_without_reply: true
           });
