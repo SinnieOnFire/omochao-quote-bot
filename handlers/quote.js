@@ -1,6 +1,7 @@
 const Markup = require('telegraf/markup')
 const Telegram = require('telegraf/telegram')
 const fs = require('fs')
+const path = require('path')
 const got = require('got')
 const {
   OpenAI
@@ -56,6 +57,63 @@ const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'))
 //   png_sticker: { source: 'placeholder.png' },
 //   emojis: '💜'
 // }).then(console.log)
+
+// Path to the text quotes file
+const textQuotesPath = path.join(process.cwd(), 'text-quotes.json')
+
+// Function to save text quote to JSON file
+async function saveTextQuote(ctx, messages, stickerFileUniqueId = null) {
+  try {
+    // Read existing quotes or create empty object
+    let textQuotes = {}
+    if (fs.existsSync(textQuotesPath)) {
+      const fileContent = fs.readFileSync(textQuotesPath, 'utf8')
+      textQuotes = JSON.parse(fileContent)
+    }
+
+    // Generate unique key
+    const timestamp = Math.floor(Date.now() / 1000)
+    const randomId = Math.random().toString(36).substring(2, 8)
+    const key = `${timestamp}-${randomId}`
+
+    // Extract text from messages
+    const quotedTexts = messages.map(msg => {
+      let text = msg.text || ''
+      if (msg.quote && msg.quote.text) {
+        text = msg.quote.text
+      }
+      return text
+    }).filter(text => text).join('\n')
+
+    // Create quote entry
+    const quoteEntry = {
+      deleted: [],
+      from: ctx.from.username || ctx.from.first_name || 'Unknown',
+      text: quotedTexts,
+      time: timestamp,
+      key: key,
+      chat_id: ctx.chat.id,
+      message_id: ctx.message.message_id,
+      user_id: ctx.from.id
+    }
+
+    // Add sticker file_unique_id if provided
+    if (stickerFileUniqueId) {
+      quoteEntry.sticker_file_unique_id = stickerFileUniqueId
+    }
+
+    // Save to quotes object
+    textQuotes[key] = quoteEntry
+
+    // Write back to file
+    fs.writeFileSync(textQuotesPath, JSON.stringify(textQuotes, null, 2), 'utf8')
+
+    return true
+  } catch (error) {
+    console.error('Error saving text quote:', error)
+    return false
+  }
+}
 
 let botInfo
 let clearStickerPackTimer
@@ -884,6 +942,9 @@ ${JSON.stringify(messageForAIContext)}
 
           await quoteDb.save()
         }
+        
+        // Save text quote to separate JSON file with sticker file_unique_id
+        await saveTextQuote(ctx, quoteMessages, sendResult.sticker.file_unique_id)
       } else if (generate.headers['quote-type'] === 'image') {
         await ctx.replyWithPhoto({
           source: image,
@@ -892,6 +953,9 @@ ${JSON.stringify(messageForAIContext)}
           reply_to_message_id: ctx.message.message_id,
           allow_sending_without_reply: true
         })
+        
+        // Save text quote to separate JSON file
+        await saveTextQuote(ctx, quoteMessages)
       } else {
         await ctx.replyWithDocument({
           source: image,
@@ -901,6 +965,9 @@ ${JSON.stringify(messageForAIContext)}
           allow_sending_without_reply: true,
           business_connection_id: ctx.update?.business_message?.business_connection_id
         })
+        
+        // Save text quote to separate JSON file
+        await saveTextQuote(ctx, quoteMessages)
       }
     } catch (error) {
       return handleQuoteError(ctx, error)

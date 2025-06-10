@@ -1,3 +1,41 @@
+const fs = require('fs')
+const path = require('path')
+
+// Path to the text quotes file
+const textQuotesPath = path.join(process.cwd(), 'text-quotes.json')
+
+// Function to delete quote from text-quotes.json by sticker file_unique_id
+async function deleteTextQuoteBySticker(fileUniqueId) {
+  try {
+    if (!fs.existsSync(textQuotesPath)) {
+      return false
+    }
+
+    const fileContent = fs.readFileSync(textQuotesPath, 'utf8')
+    let textQuotes = JSON.parse(fileContent)
+    
+    // Find and delete quote with matching sticker_file_unique_id
+    let deleted = false
+    for (const key in textQuotes) {
+      if (textQuotes[key].sticker_file_unique_id === fileUniqueId) {
+        delete textQuotes[key]
+        deleted = true
+        break
+      }
+    }
+
+    if (deleted) {
+      // Write back to file
+      fs.writeFileSync(textQuotesPath, JSON.stringify(textQuotes, null, 2), 'utf8')
+    }
+
+    return deleted
+  } catch (error) {
+    console.error('Error deleting text quote:', error)
+    return false
+  }
+}
+
 module.exports = async ctx => {
   const stickerLinkPrefix = 'https://t.me/addstickers/'
   let result
@@ -15,6 +53,10 @@ module.exports = async ctx => {
   if (ctx.group.info.stickerSet && replyMessage.sticker.set_name && ctx.group.info.stickerSet.name === replyMessage.sticker.set_name) {
     try {
       await ctx.telegram.deleteStickerFromSet(replyMessage.sticker.file_id)
+      
+      // Also delete from text-quotes.json
+      await deleteTextQuoteBySticker(replyMessage.sticker.file_unique_id)
+      
       result = ctx.i18n.t('sticker.delete.suc', {
         link: `${stickerLinkPrefix}${ctx.group.info.stickerSet.name}`
       })
@@ -50,6 +92,9 @@ module.exports = async ctx => {
 
       const deleteResult = await ctx.db.Quote.deleteOne({ _id: quote._id })
       if (deleteResult.deletedCount === 1) {
+        // Also delete from text-quotes.json
+        await deleteTextQuoteBySticker(replyMessage.sticker.file_unique_id)
+        
         result = ctx.i18n.t('sticker.delete_random.suc')
       } else {
         result = ctx.i18n.t('sticker.delete_random.error', {
