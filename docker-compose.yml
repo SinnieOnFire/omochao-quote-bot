@@ -8,6 +8,7 @@ services:
         restart: always
         volumes:
             - /root/quotes/quotes.json:/app/quotes.json
+            - /root/omochao-quote-bot/text-quotes.json:/app/text-quotes.json
         logging:
             driver: "json-file"
             options:
