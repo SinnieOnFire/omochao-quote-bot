@@ -140,8 +140,79 @@ function deleteMessage(messageId) {
   }
 }
 
+async function importForwardedMessage(ctx, forwardedMessage) {
+  try {
+    await ensureDataDirExists()
+    
+    const messageText = forwardedMessage.text || forwardedMessage.caption || ''
+    
+    if (!messageText.toLowerCase().includes('рокк ебол')) {
+      return false
+    }
+    
+    const hasImage = forwardedMessage.photo || 
+      (forwardedMessage.document && forwardedMessage.document.mime_type && 
+       forwardedMessage.document.mime_type.startsWith('image/'))
+    
+    if (!hasImage) {
+      return false
+    }
+    
+    const messageId = `${forwardedMessage.forward_from_chat?.id || forwardedMessage.chat.id}_${forwardedMessage.forward_from_message_id || forwardedMessage.message_id}_imported_${Date.now()}`
+    const existingMessages = getMessages()
+    
+    if (existingMessages[messageId]) {
+      return false
+    }
+    
+    const messageData = {
+      chat_id: forwardedMessage.forward_from_chat?.id || forwardedMessage.chat.id,
+      message_id: forwardedMessage.forward_from_message_id || forwardedMessage.message_id,
+      from: forwardedMessage.forward_from || forwardedMessage.from,
+      date: forwardedMessage.forward_date || forwardedMessage.date,
+      photo: forwardedMessage.photo,
+      document: forwardedMessage.document,
+      caption: messageText,
+      saved_at: Date.now(),
+      saved_by: ctx.from.id,
+      imported: true,
+      original_chat_id: forwardedMessage.forward_from_chat?.id,
+      original_message_id: forwardedMessage.forward_from_message_id
+    }
+    
+    existingMessages[messageId] = messageData
+    saveMessages(existingMessages)
+    updateMessageQueue()
+    
+    return messageId
+  } catch (error) {
+    console.error('Ошибка импорта пересланного сообщения:', error)
+    return false
+  }
+}
+
 module.exports = async (ctx) => {
   const messageText = ctx.message.text || ctx.message.caption || ''
+  
+  // Check for import command
+  if (messageText.toLowerCase().startsWith('/import_rockyball')) {
+    await ctx.reply('Для импорта исторических сообщений с рокк еболом:\n1. Перейдите в чат -1002140477919\n2. Найдите сообщения с "рокк ебол" и картинками\n3. Переслать их в этот чат\n4. Бот автоматически сохранит пересланные сообщения')
+    return
+  }
+  
+  // Check for forwarded messages
+  if (ctx.message.forward_from_chat || ctx.message.forward_from) {
+    const targetChatId = -1002140477919
+    const forwardedFromChat = ctx.message.forward_from_chat?.id
+    
+    if (forwardedFromChat === targetChatId) {
+      const importedId = await importForwardedMessage(ctx, ctx.message)
+      if (importedId) {
+        await ctx.reply('Рокк ебол! Историческое сообщение импортировано!')
+      }
+      return
+    }
+  }
   
   if (!messageText.toLowerCase().includes('рокк ебол')) {
     return
