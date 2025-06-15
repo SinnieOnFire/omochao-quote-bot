@@ -140,116 +140,51 @@ function deleteMessage(messageId) {
   }
 }
 
-async function importForwardedMessage(ctx, forwardedMessage) {
+async function importMessageById(ctx, chatId, messageId) {
   try {
-    await ensureDataDirExists()
+    // Try to get the message by copying it to current chat
+    const copiedMessage = await ctx.telegram.copyMessage(
+      ctx.chat.id,
+      chatId,
+      messageId
+    );
     
-    const messageText = forwardedMessage.text || forwardedMessage.caption || ''
+    // Delete the copied message immediately
+    await ctx.telegram.deleteMessage(ctx.chat.id, copiedMessage.message_id);
     
-    if (!messageText.toLowerCase().includes('рокк ебол')) {
-      return false
-    }
-    
-    const hasImage = forwardedMessage.photo || 
-      (forwardedMessage.document && forwardedMessage.document.mime_type && 
-       forwardedMessage.document.mime_type.startsWith('image/'))
-    
-    if (!hasImage) {
-      return false
-    }
-    
-    const messageId = `${forwardedMessage.forward_from_chat?.id || forwardedMessage.chat.id}_${forwardedMessage.forward_from_message_id || forwardedMessage.message_id}_imported_${Date.now()}`
-    const existingMessages = getMessages()
-    
-    if (existingMessages[messageId]) {
-      return false
-    }
-    
-    const messageData = {
-      chat_id: forwardedMessage.forward_from_chat?.id || forwardedMessage.chat.id,
-      message_id: forwardedMessage.forward_from_message_id || forwardedMessage.message_id,
-      from: forwardedMessage.forward_from || forwardedMessage.from,
-      date: forwardedMessage.forward_date || forwardedMessage.date,
-      photo: forwardedMessage.photo,
-      document: forwardedMessage.document,
-      caption: messageText,
-      saved_at: Date.now(),
-      saved_by: ctx.from.id,
-      imported: true,
-      original_chat_id: forwardedMessage.forward_from_chat?.id,
-      original_message_id: forwardedMessage.forward_from_message_id
-    }
-    
-    existingMessages[messageId] = messageData
-    saveMessages(existingMessages)
-    updateMessageQueue()
-    
-    return messageId
+    // If successful, the original message exists
+    return true;
   } catch (error) {
-    console.error('Ошибка импорта пересланного сообщения:', error)
-    return false
+    console.error(`Message ${messageId} not found or inaccessible:`, error.message);
+    return false;
   }
 }
 
 module.exports = async (ctx) => {
   const messageText = ctx.message.text || ctx.message.caption || ''
   
-  // Check for import command
-  if (messageText.toLowerCase().startsWith('/import_rockyball')) {
-    await ctx.reply('Для импорта исторических сообщений с рокк еболом:\n1. Перейдите в чат -1002140477919\n2. Найдите сообщения с "рокк ебол" и картинками\n3. Переслать их в этот чат\n4. Затем отправьте /save_as_original для сохранения последнего пересланного сообщения как оригинального')
-    return
-  }
-  
-  // Manual save forwarded message as original
-  if (messageText.toLowerCase().startsWith('/save_as_original')) {
-    if (ctx.message.reply_to_message) {
-      const replyMsg = ctx.message.reply_to_message
-      const hasImage = replyMsg.photo || (replyMsg.document && replyMsg.document.mime_type?.startsWith('image/'))
-      const msgText = replyMsg.text || replyMsg.caption || ''
+  // Command to import by message ID
+  if (messageText.toLowerCase().startsWith('/import_by_id ')) {
+    const idString = messageText.split(' ')[1];
+    if (idString && idString.includes('_')) {
+      const [chatId, messageId] = idString.split('_');
+      const targetChatId = parseInt(chatId);
+      const targetMessageId = parseInt(messageId);
       
-      if (hasImage && msgText.toLowerCase().includes('рокк ебол')) {
-        const messageId = `original_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-        const messages = getMessages()
-        
-        const messageData = {
-          chat_id: -1002140477919, // Force original chat ID
-          message_id: Math.floor(Math.random() * 1000000), // Random original message ID
-          from: { id: 0, first_name: "Imported User", username: "imported" }, // Placeholder user
-          date: replyMsg.date,
-          photo: replyMsg.photo,
-          document: replyMsg.document,
-          caption: msgText,
-          saved_at: Date.now(),
-          saved_by: ctx.from.id,
-          imported: true
+      if (targetChatId === -1002140477919) {
+        const exists = await importMessageById(ctx, targetChatId, targetMessageId);
+        if (exists) {
+          await ctx.reply(`Message ${targetMessageId} exists and can be accessed!`);
+        } else {
+          await ctx.reply(`Message ${targetMessageId} not found or inaccessible.`);
         }
-        
-        messages[messageId] = messageData
-        saveMessages(messages)
-        updateMessageQueue()
-        
-        await ctx.reply('Рокк ебол! Сообщение сохранено как оригинальное из чата -1002140477919!')
       } else {
-        await ctx.reply('Ответьте на сообщение с картинкой и "рокк ебол"')
+        await ctx.reply('Only messages from -1002140477919 are supported');
       }
     } else {
-      await ctx.reply('Ответьте этой командой на пересланное сообщение')
+      await ctx.reply('Usage: /import_by_id -1002140477919_431821_1749999841896');
     }
-    return
-  }
-  
-  // Check for forwarded messages
-  if (ctx.message.forward_from_chat || ctx.message.forward_from) {
-    const targetChatId = -1002140477919
-    const forwardedFromChat = ctx.message.forward_from_chat?.id
-    
-    if (forwardedFromChat === targetChatId) {
-      const importedId = await importForwardedMessage(ctx, ctx.message)
-      if (importedId) {
-        await ctx.reply('Рокк ебол! Историческое сообщение импортировано!')
-      }
-      return
-    }
+    return;
   }
   
   if (!messageText.toLowerCase().includes('рокк ебол')) {
