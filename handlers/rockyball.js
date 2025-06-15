@@ -196,7 +196,45 @@ module.exports = async (ctx) => {
   
   // Check for import command
   if (messageText.toLowerCase().startsWith('/import_rockyball')) {
-    await ctx.reply('Для импорта исторических сообщений с рокк еболом:\n1. Перейдите в чат -1002140477919\n2. Найдите сообщения с "рокк ебол" и картинками\n3. Переслать их в этот чат\n4. Бот автоматически сохранит пересланные сообщения')
+    await ctx.reply('Для импорта исторических сообщений с рокк еболом:\n1. Перейдите в чат -1002140477919\n2. Найдите сообщения с "рокк ебол" и картинками\n3. Переслать их в этот чат\n4. Затем отправьте /save_as_original для сохранения последнего пересланного сообщения как оригинального')
+    return
+  }
+  
+  // Manual save forwarded message as original
+  if (messageText.toLowerCase().startsWith('/save_as_original')) {
+    if (ctx.message.reply_to_message) {
+      const replyMsg = ctx.message.reply_to_message
+      const hasImage = replyMsg.photo || (replyMsg.document && replyMsg.document.mime_type?.startsWith('image/'))
+      const msgText = replyMsg.text || replyMsg.caption || ''
+      
+      if (hasImage && msgText.toLowerCase().includes('рокк ебол')) {
+        const messageId = `original_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        const messages = getMessages()
+        
+        const messageData = {
+          chat_id: -1002140477919, // Force original chat ID
+          message_id: Math.floor(Math.random() * 1000000), // Random original message ID
+          from: { id: 0, first_name: "Imported User", username: "imported" }, // Placeholder user
+          date: replyMsg.date,
+          photo: replyMsg.photo,
+          document: replyMsg.document,
+          caption: msgText,
+          saved_at: Date.now(),
+          saved_by: ctx.from.id,
+          imported: true
+        }
+        
+        messages[messageId] = messageData
+        saveMessages(messages)
+        updateMessageQueue()
+        
+        await ctx.reply('Рокк ебол! Сообщение сохранено как оригинальное из чата -1002140477919!')
+      } else {
+        await ctx.reply('Ответьте на сообщение с картинкой и "рокк ебол"')
+      }
+    } else {
+      await ctx.reply('Ответьте этой командой на пересланное сообщение')
+    }
     return
   }
   
