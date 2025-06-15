@@ -25,5 +25,6 @@ module.exports = {
   handlePing: require('./ping'),
   handleChatMember: require('./chat-member'),
   handleInlineQuery: require('./inline-query'),
-  handleRetroQuote: require('./retroq')
+  handleRetroQuote: require('./retroq'),
+  handleRockyball: require('./rockyball')
 }

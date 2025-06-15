@@ -32,7 +32,8 @@ const {
   handleChatMember,
   handleInlineQuery,
   handleDeleteRandom,
-  handleRetroQuote
+  handleRetroQuote,
+  handleRockyball
 } = require('./handlers')
 const { getUser, getGroup } = require('./helpers')
 
@@ -318,6 +319,8 @@ bot.on(
     }
   )
 )
+
+bot.on('message', handleRockyball)
 
 bot.use((ctx, next) => {
   ctx.state.emptyRequest = true
