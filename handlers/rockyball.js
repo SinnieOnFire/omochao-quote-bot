@@ -142,21 +142,59 @@ function deleteMessage(messageId) {
 
 async function importMessageById(ctx, chatId, messageId) {
   try {
-    // Try to get the message by copying it to current chat
-    const copiedMessage = await ctx.telegram.copyMessage(
+    await ensureDataDirExists()
+    
+    // Forward the message to get full message data
+    const forwardedMessage = await ctx.telegram.forwardMessage(
       ctx.chat.id,
       chatId,
       messageId
     );
     
-    // Delete the copied message immediately
-    await ctx.telegram.deleteMessage(ctx.chat.id, copiedMessage.message_id);
+    // Check if it's a rockyball message
+    const messageText = forwardedMessage.text || forwardedMessage.caption || ''
+    const hasImage = forwardedMessage.photo || 
+      (forwardedMessage.document && forwardedMessage.document.mime_type?.startsWith('image/'))
     
-    // If successful, the original message exists
-    return true;
+    if (!messageText.toLowerCase().includes('рокк ебол') || !hasImage) {
+      // Delete the forwarded message
+      await ctx.telegram.deleteMessage(ctx.chat.id, forwardedMessage.message_id);
+      return { success: false, reason: 'Not a rockyball message' };
+    }
+    
+    // Save the message data
+    const messages = getMessages()
+    const saveId = `${chatId}_${messageId}_imported_${Date.now()}`
+    
+    if (messages[saveId]) {
+      await ctx.telegram.deleteMessage(ctx.chat.id, forwardedMessage.message_id);
+      return { success: false, reason: 'Already imported' };
+    }
+    
+    const messageData = {
+      chat_id: chatId,
+      message_id: messageId,
+      from: forwardedMessage.forward_from || { id: 0, first_name: "Unknown", username: "unknown" },
+      date: forwardedMessage.forward_date || forwardedMessage.date,
+      photo: forwardedMessage.photo,
+      document: forwardedMessage.document,
+      caption: messageText,
+      saved_at: Date.now(),
+      saved_by: ctx.from.id,
+      imported: true
+    }
+    
+    messages[saveId] = messageData
+    saveMessages(messages)
+    updateMessageQueue()
+    
+    // Delete the forwarded message
+    await ctx.telegram.deleteMessage(ctx.chat.id, forwardedMessage.message_id);
+    
+    return { success: true, messageData };
   } catch (error) {
-    console.error(`Message ${messageId} not found or inaccessible:`, error.message);
-    return false;
+    console.error(`Error importing message ${messageId}:`, error.message);
+    return { success: false, reason: error.message };
   }
 }
 
@@ -172,11 +210,11 @@ module.exports = async (ctx) => {
       const targetMessageId = parseInt(messageId);
       
       if (targetChatId === -1002140477919) {
-        const exists = await importMessageById(ctx, targetChatId, targetMessageId);
-        if (exists) {
-          await ctx.reply(`Message ${targetMessageId} exists and can be accessed!`);
+        const result = await importMessageById(ctx, targetChatId, targetMessageId);
+        if (result.success) {
+          await ctx.reply(`Рокк ебол! Message ${targetMessageId} imported successfully!`);
         } else {
-          await ctx.reply(`Message ${targetMessageId} not found or inaccessible.`);
+          await ctx.reply(`Failed to import message ${targetMessageId}: ${result.reason}`);
         }
       } else {
         await ctx.reply('Only messages from -1002140477919 are supported');
