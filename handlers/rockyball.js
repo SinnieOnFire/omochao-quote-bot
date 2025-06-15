@@ -1,12 +1,14 @@
 const fs = require('fs')
 const path = require('path')
 
-const MESSAGES_FILE = '/app/rockyball-messages.json'
-const QUEUE_FILE = '/app/rockyball-queue.json'
+const MESSAGES_FILE = '/app/data/rockyball-messages.json'
+const QUEUE_FILE = '/app/data/rockyball-queue.json'
 
-async function ensureFilesExist() {
-  // Files will be created automatically when first written to
-  // No need to create directories as we're using direct file paths
+async function ensureDataDirExists() {
+  const dataDir = '/app/data'
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true })
+  }
 }
 
 function getMessages() {
@@ -79,7 +81,7 @@ function getRandomMessage() {
 }
 
 async function saveMessageData(ctx, message) {
-  await ensureFilesExist()
+  await ensureDataDirExists()
   
   const hasImage = message.photo || 
     (message.document && message.document.mime_type && 

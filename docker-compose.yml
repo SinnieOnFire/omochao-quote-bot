@@ -9,8 +9,7 @@ services:
         volumes:
             - /root/quotes/quotes.json:/app/quotes.json
             - /root/omochao-quote-bot/text-quotes.json:/app/text-quotes.json
-            - /root/omochao-quote-bot/rockyball-messages.json:/app/rockyball-messages.json
-            - /root/omochao-quote-bot/rockyball-queue.json:/app/rockyball-queue.json
+            - /root/omochao-quote-bot/data:/app/data
         logging:
             driver: "json-file"
             options:
