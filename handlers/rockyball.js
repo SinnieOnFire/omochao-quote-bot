@@ -140,90 +140,10 @@ function deleteMessage(messageId) {
   }
 }
 
-async function importMessageById(ctx, chatId, messageId) {
-  try {
-    await ensureDataDirExists()
-    
-    // Forward the message to get full message data
-    const forwardedMessage = await ctx.telegram.forwardMessage(
-      ctx.chat.id,
-      chatId,
-      messageId
-    );
-    
-    // Check if it's a rockyball message
-    const messageText = forwardedMessage.text || forwardedMessage.caption || ''
-    const hasImage = forwardedMessage.photo || 
-      (forwardedMessage.document && forwardedMessage.document.mime_type?.startsWith('image/'))
-    
-    if (!messageText.toLowerCase().includes('рокк ебол') || !hasImage) {
-      // Delete the forwarded message
-      await ctx.telegram.deleteMessage(ctx.chat.id, forwardedMessage.message_id);
-      return { success: false, reason: 'Not a rockyball message' };
-    }
-    
-    // Save the message data
-    const messages = getMessages()
-    const saveId = `${chatId}_${messageId}_imported_${Date.now()}`
-    
-    if (messages[saveId]) {
-      await ctx.telegram.deleteMessage(ctx.chat.id, forwardedMessage.message_id);
-      return { success: false, reason: 'Already imported' };
-    }
-    
-    const messageData = {
-      chat_id: chatId,
-      message_id: messageId,
-      from: forwardedMessage.forward_from || { id: 0, first_name: "Unknown", username: "unknown" },
-      date: forwardedMessage.forward_date || forwardedMessage.date,
-      photo: forwardedMessage.photo,
-      document: forwardedMessage.document,
-      caption: messageText,
-      saved_at: Date.now(),
-      saved_by: ctx.from.id,
-      imported: true
-    }
-    
-    messages[saveId] = messageData
-    saveMessages(messages)
-    updateMessageQueue()
-    
-    // Delete the forwarded message
-    await ctx.telegram.deleteMessage(ctx.chat.id, forwardedMessage.message_id);
-    
-    return { success: true, messageData };
-  } catch (error) {
-    console.error(`Error importing message ${messageId}:`, error.message);
-    return { success: false, reason: error.message };
-  }
-}
 
 module.exports = async (ctx) => {
   const messageText = ctx.message.text || ctx.message.caption || ''
   
-  // Command to import by message ID
-  if (messageText.toLowerCase().startsWith('/import_by_id ')) {
-    const idString = messageText.split(' ')[1];
-    if (idString && idString.includes('_')) {
-      const [chatId, messageId] = idString.split('_');
-      const targetChatId = parseInt(chatId);
-      const targetMessageId = parseInt(messageId);
-      
-      if (targetChatId === -1002140477919) {
-        const result = await importMessageById(ctx, targetChatId, targetMessageId);
-        if (result.success) {
-          await ctx.reply(`Рокк ебол! Message ${targetMessageId} imported successfully!`);
-        } else {
-          await ctx.reply(`Failed to import message ${targetMessageId}: ${result.reason}`);
-        }
-      } else {
-        await ctx.reply('Only messages from -1002140477919 are supported');
-      }
-    } else {
-      await ctx.reply('Usage: /import_by_id -1002140477919_431821_1749999841896');
-    }
-    return;
-  }
   
   if (!messageText.toLowerCase().includes('рокк ебол')) {
     return
@@ -263,16 +183,20 @@ module.exports = async (ctx) => {
     if (randomMessageData) {
       try {
         if (randomMessageData.photo) {
+          const originalCaption = randomMessageData.caption || ''
+          const senderInfo = randomMessageData.from ? `от ${randomMessageData.from.first_name}` : 'от неизвестного'
+          const fullCaption = `${originalCaption}\n\n${senderInfo}`
+          
           await ctx.replyWithPhoto(randomMessageData.photo[randomMessageData.photo.length - 1].file_id, {
-            reply_to_message_id: ctx.message.message_id,
-            allow_sending_without_reply: true,
-            caption: randomMessageData.caption
+            caption: fullCaption
           })
         } else if (randomMessageData.document) {
+          const originalCaption = randomMessageData.caption || ''
+          const senderInfo = randomMessageData.from ? `от ${randomMessageData.from.first_name}` : 'от неизвестного'
+          const fullCaption = `${originalCaption}\n\n${senderInfo}`
+          
           await ctx.replyWithDocument(randomMessageData.document.file_id, {
-            reply_to_message_id: ctx.message.message_id,
-            allow_sending_without_reply: true,
-            caption: randomMessageData.caption
+            caption: fullCaption
           })
         }
       } catch (error) {
