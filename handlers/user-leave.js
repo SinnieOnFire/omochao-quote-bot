@@ -2,6 +2,8 @@ const Composer = require('telegraf/composer')
 const composer = new Composer()
 
 composer.use(async (ctx, next) => {
+  console.log('Update received, type:', Object.keys(ctx.update))
+  
   if (ctx.update.chat_member) {
     console.log('Chat member update received:', JSON.stringify(ctx.update.chat_member, null, 2))
     
