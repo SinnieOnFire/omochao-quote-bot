@@ -7,15 +7,12 @@ composer.use(async (ctx, next) => {
     try {
       const { chat, left_chat_member } = ctx.update.message
       
-      console.log('User left detected:', left_chat_member.first_name)
-      
       // Don't send message if a bot left
       if (!left_chat_member.is_bot) {
         const username = left_chat_member.username ? `@${left_chat_member.username}` : left_chat_member.first_name
         const message = `Кто не выдержал нашего общества? ${username}!`
         
         await ctx.telegram.sendMessage(chat.id, message)
-        console.log('Leave message sent successfully')
       }
     } catch (error) {
       console.error('Error in user leave handler:', error)
