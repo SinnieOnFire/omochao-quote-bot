@@ -27,7 +27,9 @@ if (cluster.isMaster) {
 
   setupMaster(bot, queueManager, MAX_WORKERS, MAX_UPDATES_PER_WORKER)
 
-  bot.launch()
+  bot.launch({
+    allowedUpdates: ['message', 'callback_query', 'inline_query', 'chat_member', 'my_chat_member']
+  })
 
   // Graceful stop
   process.once('SIGINT', () => bot.stop('SIGINT'))
