@@ -1,8 +1,12 @@
 const Composer = require('telegraf/composer')
 const composer = new Composer()
 
+// Add a catch-all debug handler
 composer.use(async (ctx, next) => {
-  console.log('Update received, type:', Object.keys(ctx.update))
+  console.log('=== USER-LEAVE HANDLER ===')
+  console.log('Full update keys:', Object.keys(ctx.update))
+  console.log('Update content:', JSON.stringify(ctx.update, null, 2))
+  console.log('==========================')
   
   if (ctx.update.chat_member) {
     console.log('Chat member update received:', JSON.stringify(ctx.update.chat_member, null, 2))
