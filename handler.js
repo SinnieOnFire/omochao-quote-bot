@@ -35,6 +35,7 @@ const {
   handleRetroQuote,
   handleRockyball
 } = require('./handlers')
+const handleUserLeave = require('./handlers/user-leave')
 const { getUser, getGroup } = require('./helpers')
 
 const randomIntegerInRange = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
@@ -48,6 +49,7 @@ bot.command('json', ({ replyWithHTML, message }) =>
 )
 
 bot.use(handleChatMember)
+bot.use(handleUserLeave)
 
 bot.use(
   Composer.mount(
