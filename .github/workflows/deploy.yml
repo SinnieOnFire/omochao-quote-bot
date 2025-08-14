@@ -1,0 +1,29 @@
+name: Deploy to VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: ${{ secrets.VPS_PORT || 22 }}
+        script: |
+          cd ~/omochao-quote-bot
+          
+          # Pull latest changes
+          git pull origin master
+          
+          # Rebuild and restart the bot
+          docker-compose down && docker-compose up -d --build
+          
+          # Show final status
+          docker-compose ps
+          echo "Bot deployment completed at $(date)"
