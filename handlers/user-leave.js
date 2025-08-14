@@ -1,32 +1,18 @@
 const Composer = require('telegraf/composer')
 const composer = new Composer()
 
-// Add a catch-all debug handler
 composer.use(async (ctx, next) => {
-  console.log('=== USER-LEAVE HANDLER ===')
-  console.log('Full update keys:', Object.keys(ctx.update))
-  console.log('Update content:', JSON.stringify(ctx.update, null, 2))
-  console.log('==========================')
-  
-  if (ctx.update.chat_member) {
-    console.log('Chat member update received:', JSON.stringify(ctx.update.chat_member, null, 2))
-    
+  // Check for left_chat_member in regular message updates
+  if (ctx.update.message && ctx.update.message.left_chat_member) {
     try {
-      const { chat, from, old_chat_member, new_chat_member } = ctx.update.chat_member
+      const { chat, left_chat_member } = ctx.update.message
       
-      console.log(`User ${from.first_name} status change: ${old_chat_member.status} -> ${new_chat_member.status}`)
+      console.log('User left detected:', left_chat_member.first_name)
       
-      // Check if user left the chat
-      if (old_chat_member.status !== 'left' && old_chat_member.status !== 'kicked' && 
-          (new_chat_member.status === 'left' || new_chat_member.status === 'kicked')) {
-        
-        console.log('User left detected, sending message...')
-        
-        // Send a message when user leaves
-        const username = from.username ? `@${from.username}` : from.first_name
-        const message = new_chat_member.status === 'kicked' 
-          ? `Кто довыделывался? ${username}!` 
-          : `Кто не выдержал нашего общества? ${username}!`
+      // Don't send message if a bot left
+      if (!left_chat_member.is_bot) {
+        const username = left_chat_member.username ? `@${left_chat_member.username}` : left_chat_member.first_name
+        const message = `Кто не выдержал нашего общества? ${username}!`
         
         await ctx.telegram.sendMessage(chat.id, message)
         console.log('Leave message sent successfully')
