@@ -2,27 +2,25 @@ const Composer = require('telegraf/composer')
 const composer = new Composer()
 
 composer.use(async (ctx, next) => {
-  // Log all updates to see what we're receiving
   console.log('User-leave handler checking update:', JSON.stringify(ctx.update, null, 2))
   
-  // Check for left_chat_member in regular message updates
-  if (ctx.update.message && ctx.update.message.left_chat_member) {
-    console.log('User left detected:', ctx.update.message.left_chat_member)
-    try {
-      const { chat, left_chat_member } = ctx.update.message
+  // Check for chat_member updates where status changed to "left"
+  if (ctx.update.chat_member) {
+    const { chat_member } = ctx.update
+    const oldStatus = chat_member.old_chat_member?.status
+    const newStatus = chat_member.new_chat_member?.status
+    
+    // User left the chat
+    if (oldStatus === 'member' && newStatus === 'left') {
+      const user = chat_member.new_chat_member.user
       
-      // Don't send message if a bot left
-      if (!left_chat_member.is_bot) {
-        const username = left_chat_member.username ? `@${left_chat_member.username}` : left_chat_member.first_name
+      if (!user.is_bot) {
+        const username = user.username ? `@${user.username}` : user.first_name
         const message = `Кто не выдержал нашего общества? ${username}!`
         
-        console.log('Sending leave message for user:', username, 'to chat:', chat.id)
-        await ctx.telegram.sendMessage(chat.id, message)
-      } else {
-        console.log('Bot left, not sending message')
+        console.log('Sending leave message for user:', username, 'to chat:', chat_member.chat.id)
+        await ctx.telegram.sendMessage(chat_member.chat.id, message)
       }
-    } catch (error) {
-      console.error('Error in user leave handler:', error)
     }
   }
   
