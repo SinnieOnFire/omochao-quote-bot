@@ -26,6 +26,33 @@ composer.use(async (ctx, next) => {
     }
   }
   
+  // Check for chat_member_updated events (for admins leaving)
+  if (ctx.update.chat_member_updated) {
+    const { new_chat_member, old_chat_member, chat } = ctx.update.chat_member_updated
+    
+    // Check if user status changed to "left"
+    if (new_chat_member && new_chat_member.status === 'left' && 
+        old_chat_member && old_chat_member.status !== 'left') {
+      console.log('Admin/user left detected via chat_member_updated:', new_chat_member.user)
+      
+      try {
+        const leftUser = new_chat_member.user
+        // Don't send message if a bot left
+        if (!leftUser.is_bot) {
+          const username = leftUser.username ? `@${leftUser.username}` : leftUser.first_name
+          const message = `Кто не выдержал нашего общества? ${username}!`
+          
+          console.log('Sending leave message for user:', username, 'to chat:', chat.id)
+          await ctx.telegram.sendMessage(chat.id, message)
+        } else {
+          console.log('Bot left, not sending message')
+        }
+      } catch (error) {
+        console.error('Error in chat_member_updated handler:', error)
+      }
+    }
+  }
+  
   return next()
 })
 
