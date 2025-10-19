@@ -33,7 +33,8 @@ const {
   handleInlineQuery,
   handleDeleteRandom,
   handleRetroQuote,
-  handleRockyball
+  handleRockyball,
+  handleUserJoin
 } = require('./handlers')
 const handleUserLeave = require('./handlers/user-leave')
 const { getUser, getGroup } = require('./helpers')
@@ -50,6 +51,7 @@ bot.command('json', ({ replyWithHTML, message }) =>
 
 bot.use(handleChatMember)
 bot.use(handleUserLeave)
+bot.use(handleUserJoin)
 
 bot.use(
   Composer.mount(

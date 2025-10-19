@@ -26,5 +26,6 @@ module.exports = {
   handleChatMember: require('./chat-member'),
   handleInlineQuery: require('./inline-query'),
   handleRetroQuote: require('./retroq'),
-  handleRockyball: require('./rockyball')
+  handleRockyball: require('./rockyball'),
+  handleUserJoin: require('./user-join')
 }
