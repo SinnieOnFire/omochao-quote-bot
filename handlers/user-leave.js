@@ -22,21 +22,35 @@ composer.use(async (ctx, next) => {
     const { chat_member } = ctx.update
     const oldStatus = chat_member.old_chat_member?.status
     const newStatus = chat_member.new_chat_member?.status
-    
+
     // User left the chat or was kicked/banned
     if ((oldStatus === 'member' || oldStatus === 'restricted') && (newStatus === 'left' || newStatus === 'kicked')) {
       const user = chat_member.new_chat_member.user
-      
+
       if (!user.is_bot) {
         const username = user.username ? `@${user.username}` : user.first_name
         let message = `Кто не выдержал нашего общества? ${username}!`
-        
+
         // Different message for kicked/banned users
         if (newStatus === 'kicked') {
           message = `Кого не выдержало наше общество? ${username}!`
         }
-        
+
         console.log('Sending leave message for user:', username, 'to chat:', chat_member.chat.id)
+        await ctx.telegram.sendMessage(chat_member.chat.id, message)
+      }
+    }
+
+    // User was restricted (muted)
+    if (newStatus === 'restricted' && oldStatus !== 'restricted') {
+      const user = chat_member.new_chat_member.user
+      const canSendMessages = chat_member.new_chat_member.can_send_messages
+
+      if (!user.is_bot && canSendMessages === false) {
+        const username = user.username ? `@${user.username}` : user.first_name
+        const message = `${username} отправляется в доброрум!`
+
+        console.log('Sending restriction message for user:', username, 'to chat:', chat_member.chat.id)
         await ctx.telegram.sendMessage(chat_member.chat.id, message)
       }
     }
@@ -45,19 +59,19 @@ composer.use(async (ctx, next) => {
   // Check for chat_member_updated events (for admins leaving)
   if (ctx.update.chat_member_updated) {
     const { new_chat_member, old_chat_member, chat } = ctx.update.chat_member_updated
-    
+
     // Check if user status changed to "left"
-    if (new_chat_member && new_chat_member.status === 'left' && 
+    if (new_chat_member && new_chat_member.status === 'left' &&
         old_chat_member && old_chat_member.status !== 'left') {
       console.log('Admin/user left detected via chat_member_updated:', new_chat_member.user)
-      
+
       try {
         const leftUser = new_chat_member.user
         // Don't send message if a bot left
         if (!leftUser.is_bot) {
           const username = leftUser.username ? `@${leftUser.username}` : leftUser.first_name
           const message = `Кто не выдержал нашего общества? ${username}!`
-          
+
           console.log('Sending leave message for user:', username, 'to chat:', chat.id)
           await ctx.telegram.sendMessage(chat.id, message)
         } else {
@@ -65,6 +79,21 @@ composer.use(async (ctx, next) => {
         }
       } catch (error) {
         console.error('Error in chat_member_updated handler:', error)
+      }
+    }
+
+    // Check if user was restricted (muted)
+    if (new_chat_member && new_chat_member.status === 'restricted' &&
+        old_chat_member && old_chat_member.status !== 'restricted') {
+      const user = new_chat_member.user
+      const canSendMessages = new_chat_member.can_send_messages
+
+      if (!user.is_bot && canSendMessages === false) {
+        const username = user.username ? `@${user.username}` : user.first_name
+        const message = `${username} отправляется в доброрум!`
+
+        console.log('Sending restriction message for user:', username, 'to chat:', chat.id)
+        await ctx.telegram.sendMessage(chat.id, message)
       }
     }
   }
