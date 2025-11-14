@@ -55,16 +55,16 @@ composer.use(async (ctx, next) => {
           // Remove from pending queries
           pendingQueries.delete(userId)
 
-          // Forward the entire message to @sinnie
+          // Forward the entire message to admin
           try {
-            await ctx.telegram.forwardMessage('@sinnie', ctx.message.chat.id, ctx.message.message_id)
-            console.log('Forwarded @oLolsBot response to @sinnie')
+            await ctx.telegram.forwardMessage(ctx.config.adminId, ctx.message.chat.id, ctx.message.message_id)
+            console.log('Forwarded @oLolsBot response to admin')
           } catch (forwardError) {
-            console.error('Error forwarding message to @sinnie:', forwardError)
+            console.error('Error forwarding message to admin:', forwardError)
 
             // If forwarding fails, try sending the text content
             if (messageText) {
-              await ctx.telegram.sendMessage('@sinnie',
+              await ctx.telegram.sendMessage(ctx.config.adminId,
                 `📨 <b>Response from @oLolsBot:</b>\n\n${messageText}`,
                 { parse_mode: 'HTML' }
               )

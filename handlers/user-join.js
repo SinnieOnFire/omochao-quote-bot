@@ -53,15 +53,15 @@ composer.use(async (ctx, next) => {
             if (member.username) notificationMessage += ` (@${member.username})`
             notificationMessage += `\n\n⏳ Querying @oLolsBot with: <code>${oLolsBotQuery}</code>`
 
-            await ctx.telegram.sendMessage('@sinnie', notificationMessage, { parse_mode: 'HTML' })
-            console.log('Notification sent to @sinnie')
+            await ctx.telegram.sendMessage(ctx.config.adminId, notificationMessage, { parse_mode: 'HTML' })
+            console.log('Notification sent to admin')
           } catch (lolsError) {
             console.error('Error querying @oLolsBot:', lolsError)
-            // Send error notification to @sinnie
+            // Send error notification to admin
             const errorMessage = `❌ <b>@oLolsBot Query Failed</b>\n\n` +
               `<b>User ID:</b> <code>${member.id}</code>\n` +
               `<b>Error:</b> ${lolsError.message}`
-            await ctx.telegram.sendMessage('@sinnie', errorMessage, { parse_mode: 'HTML' }).catch(() => {})
+            await ctx.telegram.sendMessage(ctx.config.adminId, errorMessage, { parse_mode: 'HTML' }).catch(() => {})
           }
         } else {
           console.log('Bot joined, not sending message')
