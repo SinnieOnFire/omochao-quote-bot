@@ -41,7 +41,7 @@ composer.use(async (ctx, next) => {
               chat.title || chat.id.toString()
             )
 
-            await ctx.telegram.sendMessage('@oLolsBot', oLolsBotQuery)
+            await ctx.telegram.sendMessage(7822565021, oLolsBotQuery)
             console.log('Query sent to @oLolsBot for user:', oLolsBotQuery)
 
             // Also send notification to @sinnie that we're checking the user
