@@ -1,6 +1,4 @@
 const Composer = require('telegraf/composer')
-const got = require('got')
-const handleOLolsBotResponse = require('./olols-bot-response')
 const composer = new Composer()
 
 composer.use(async (ctx, next) => {
@@ -27,41 +25,24 @@ composer.use(async (ctx, next) => {
             await ctx.telegram.sendMessage(chat.id, message, { parse_mode: 'HTML' })
           }
 
-          // Query @oLolsBot for detailed user information
+          // Send notification to admin with @oLolsBot deep link
           try {
-            // @oLolsBot accepts both usernames (@username) and user IDs
-            // Prefer username if available, otherwise use ID
-            const oLolsBotQuery = member.username ? `@${member.username}` : `${member.id}`
-            console.log('Sending user info to @oLolsBot:', oLolsBotQuery)
+            console.log('Sending notification to admin for user:', member.id)
 
-            // Register this query as pending so we can match the response later
-            handleOLolsBotResponse.addPendingQuery(
-              member.id.toString(),
-              member.username,
-              chat.title || chat.id.toString()
-            )
-
-            await ctx.telegram.sendMessage(7822565021, oLolsBotQuery)
-            console.log('Query sent to @oLolsBot for user:', oLolsBotQuery)
-
-            // Also send notification to @sinnie that we're checking the user
+            // Build notification message with @oLolsBot deep link
             let notificationMessage = `🔍 <b>New User Joined</b>\n\n`
             notificationMessage += `<b>Chat:</b> ${chat.title || chat.id}\n`
             notificationMessage += `<b>User ID:</b> <code>${member.id}</code>\n`
             notificationMessage += `<b>Name:</b> ${member.first_name}`
             if (member.last_name) notificationMessage += ` ${member.last_name}`
             if (member.username) notificationMessage += ` (@${member.username})`
-            notificationMessage += `\n\n⏳ Querying @oLolsBot with: <code>${oLolsBotQuery}</code>`
+            notificationMessage += `\n\n🔗 <b>Check with @oLolsBot:</b>\n`
+            notificationMessage += `https://t.me/oLolsBot?start=${member.id}`
 
             await ctx.telegram.sendMessage(ctx.config.adminId, notificationMessage, { parse_mode: 'HTML' })
-            console.log('Notification sent to admin')
-          } catch (lolsError) {
-            console.error('Error querying @oLolsBot:', lolsError)
-            // Send error notification to admin
-            const errorMessage = `❌ <b>@oLolsBot Query Failed</b>\n\n` +
-              `<b>User ID:</b> <code>${member.id}</code>\n` +
-              `<b>Error:</b> ${lolsError.message}`
-            await ctx.telegram.sendMessage(ctx.config.adminId, errorMessage, { parse_mode: 'HTML' }).catch(() => {})
+            console.log('Notification sent to admin with @oLolsBot link')
+          } catch (notificationError) {
+            console.error('Error sending notification to admin:', notificationError)
           }
         } else {
           console.log('Bot joined, not sending message')
