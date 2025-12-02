@@ -15,7 +15,7 @@ composer.use(async (ctx, next) => {
           let message
           if (member.username) {
             // If user has username, use @username (will auto-mention)
-            message = `@${member.username}, назови три любимых игры из серии Sonic the Hedgehog чтобы продолжить.`
+            message = `@${member.username}, назови три любимых игры из серии Sonic the Hedgehog, чтобы продолжить.`
             console.log('Sending welcome message for user:', `@${member.username}`, 'to chat:', chat.id)
             await ctx.telegram.sendMessage(chat.id, message)
           } else {
