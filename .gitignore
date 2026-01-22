@@ -112,3 +112,4 @@ helpers/tdlib/data
 config.json
 
 .DS_Store
+claude.md

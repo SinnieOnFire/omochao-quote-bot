@@ -1,5 +1,4 @@
 const fs = require('fs')
-const path = require('path')
 
 const MESSAGES_FILE = '/app/data/rockyball-messages.json'
 const QUEUE_FILE = '/app/data/rockyball-queue.json'
@@ -23,7 +22,11 @@ function getMessages() {
 }
 
 function saveMessages(messages) {
-  fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2))
+  try {
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2))
+  } catch (error) {
+    console.error('Error saving messages:', error)
+  }
 }
 
 function getQueue() {
@@ -38,63 +41,67 @@ function getQueue() {
 }
 
 function saveQueue(queue) {
-  fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2))
+  try {
+    fs.writeFileSync(QUEUE_FILE, JSON.stringify(queue, null, 2))
+  } catch (error) {
+    console.error('Error saving queue:', error)
+  }
 }
 
 function updateMessageQueue() {
   const messages = getMessages()
   const messageIds = Object.keys(messages)
   const queue = getQueue()
-  
-  const newMessages = messageIds.filter(id => 
+
+  const newMessages = messageIds.filter(id =>
     !queue.used.includes(id) && !queue.available.includes(id)
   )
-  
+
   queue.available.push(...newMessages)
-  
+
   if (queue.available.length === 0 && queue.used.length > 0) {
     queue.available = [...queue.used]
     queue.used = []
   }
-  
+
   saveQueue(queue)
   return queue
 }
 
 function getRandomMessage() {
   const queue = updateMessageQueue()
-  
+
   if (queue.available.length === 0) {
     return null
   }
-  
+
   const randomIndex = Math.floor(Math.random() * queue.available.length)
   const selectedMessageId = queue.available[randomIndex]
-  
+
   queue.available.splice(randomIndex, 1)
   queue.used.push(selectedMessageId)
-  
+
   saveQueue(queue)
-  
+
   const messages = getMessages()
   return messages[selectedMessageId]
 }
 
 async function saveMessageData(ctx, message) {
   await ensureDataDirExists()
-  
-  const hasImage = message.photo || 
-    (message.document && message.document.mime_type && 
+
+  const hasImage = message.photo ||
+    (message.document && message.document.mime_type &&
      message.document.mime_type.startsWith('image/'))
-  
+
   if (!hasImage) {
     return false
   }
-  
+
   try {
     const messages = getMessages()
     const messageId = `${message.chat.id}_${message.message_id}_${Date.now()}`
-    
+
     const messageData = {
       chat_id: message.chat.id,
       message_id: message.message_id,
@@ -106,11 +113,11 @@ async function saveMessageData(ctx, message) {
       saved_at: Date.now(),
       saved_by: ctx.from.id
     }
-    
+
     messages[messageId] = messageData
     saveMessages(messages)
     updateMessageQueue()
-    
+
     return messageId
   } catch (error) {
     console.error('Ошибка сохранения сообщения:', error)
@@ -121,16 +128,16 @@ async function saveMessageData(ctx, message) {
 function deleteMessage(messageId) {
   try {
     const messages = getMessages()
-    
+
     if (messages[messageId]) {
       delete messages[messageId]
       saveMessages(messages)
-      
+
       const queue = getQueue()
       queue.available = queue.available.filter(id => id !== messageId)
       queue.used = queue.used.filter(id => id !== messageId)
       saveQueue(queue)
-      
+
       return true
     }
     return false
@@ -143,50 +150,97 @@ function deleteMessage(messageId) {
 
 module.exports = async (ctx) => {
   const messageText = ctx.message.text || ctx.message.caption || ''
-  
-  
+
+  // Handle delete command first (before the "рокк ебол" check)
+  if (ctx.message.reply_to_message && messageText.toLowerCase().trim() === 'delete') {
+    const replyToId = ctx.message.reply_to_message.message_id
+    const pendingDeletes = global.rockyballPendingDeletes || new Map()
+
+    if (pendingDeletes.has(replyToId)) {
+      const deleteInfo = pendingDeletes.get(replyToId)
+
+      if (deleteInfo.userId === ctx.from.id && deleteInfo.chatId === ctx.chat.id) {
+        const deleted = deleteMessage(deleteInfo.messageId)
+
+        if (deleted) {
+          try {
+            await ctx.reply('Рокк ебол! Картинка удалена.', {
+              reply_to_message_id: ctx.message.message_id,
+              allow_sending_without_reply: true
+            })
+          } catch (error) {
+            console.error('Error sending delete confirmation:', error)
+          }
+
+          try {
+            await ctx.deleteMessage(replyToId)
+          } catch (error) {
+            console.log('Не удалось удалить сообщение')
+          }
+        } else {
+          try {
+            await ctx.reply('Не удалось удалить картинку', {
+              reply_to_message_id: ctx.message.message_id,
+              allow_sending_without_reply: true
+            })
+          } catch (error) {
+            console.error('Error sending delete failure message:', error)
+          }
+        }
+
+        clearTimeout(deleteInfo.timeout)
+        pendingDeletes.delete(replyToId)
+      }
+    }
+    return
+  }
+
   if (!messageText.toLowerCase().includes('рокк ебол')) {
     return
   }
-  
-  const hasImage = ctx.message.photo || 
-    (ctx.message.document && ctx.message.document.mime_type && 
+
+  const hasImage = ctx.message.photo ||
+    (ctx.message.document && ctx.message.document.mime_type &&
      ctx.message.document.mime_type.startsWith('image/'))
-  
+
   if (hasImage) {
     const messageId = await saveMessageData(ctx, ctx.message)
     if (messageId) {
-      const confirmMsg = await ctx.reply('Рокк ебол! Картинка сохранена. Напиши в ответ «delete» чтобы удалить её.', {
-        reply_to_message_id: ctx.message.message_id,
-        allow_sending_without_reply: true
-      })
-      
-      const deleteTimeout = setTimeout(async () => {
-        try {
-          await ctx.deleteMessage(confirmMsg.message_id)
-        } catch (error) {
-          console.log('Не удалось удалить сообщение подтверждения')
-        }
-      }, 30000)
-      
-      global.rockyballPendingDeletes = global.rockyballPendingDeletes || new Map()
-      global.rockyballPendingDeletes.set(confirmMsg.message_id, {
-        messageId,
-        timeout: deleteTimeout,
-        chatId: ctx.chat.id,
-        userId: ctx.from.id
-      })
+      try {
+        const confirmMsg = await ctx.reply('Рокк ебол! Картинка сохранена. Напиши в ответ «delete» чтобы удалить её.', {
+          reply_to_message_id: ctx.message.message_id,
+          allow_sending_without_reply: true
+        })
+
+        const deleteTimeout = setTimeout(async () => {
+          try {
+            await ctx.deleteMessage(confirmMsg.message_id)
+          } catch (error) {
+            console.log('Не удалось удалить сообщение подтверждения')
+          }
+        }, 30000)
+
+        global.rockyballPendingDeletes = global.rockyballPendingDeletes || new Map()
+        global.rockyballPendingDeletes.set(confirmMsg.message_id, {
+          messageId,
+          timeout: deleteTimeout,
+          chatId: ctx.chat.id,
+          userId: ctx.from.id
+        })
+      } catch (error) {
+        console.error('Error sending save confirmation:', error)
+      }
     }
   } else {
     const randomMessageData = getRandomMessage()
-    
+
     if (randomMessageData) {
       try {
         if (randomMessageData.photo) {
           const originalCaption = randomMessageData.caption || ''
           const senderInfo = randomMessageData.from ? `от ${randomMessageData.from.first_name}` : 'от неизвестного'
           const fullCaption = `${originalCaption}\n\n${senderInfo}`
-          
+
           await ctx.replyWithPhoto(randomMessageData.photo[randomMessageData.photo.length - 1].file_id, {
             caption: fullCaption
           })
@@ -194,58 +248,30 @@ module.exports = async (ctx) => {
           const originalCaption = randomMessageData.caption || ''
           const senderInfo = randomMessageData.from ? `от ${randomMessageData.from.first_name}` : 'от неизвестного'
           const fullCaption = `${originalCaption}\n\n${senderInfo}`
-          
+
           await ctx.replyWithDocument(randomMessageData.document.file_id, {
             caption: fullCaption
           })
         }
       } catch (error) {
         console.error('Ошибка отправки картинки:', error)
+        try {
+          await ctx.reply('Нет доступных картинок!', {
+            reply_to_message_id: ctx.message.message_id,
+            allow_sending_without_reply: true
+          })
+        } catch (replyError) {
+          console.error('Error sending no images message:', replyError)
+        }
+      }
+    } else {
+      try {
         await ctx.reply('Нет доступных картинок!', {
           reply_to_message_id: ctx.message.message_id,
           allow_sending_without_reply: true
         })
-      }
-    } else {
-      await ctx.reply('Нет доступных картинок!', {
-        reply_to_message_id: ctx.message.message_id,
-        allow_sending_without_reply: true
-      })
-    }
-  }
-  
-  // Only process delete if it's a reply to a confirmation message AND contains "delete"
-  if (ctx.message.reply_to_message && messageText.toLowerCase().trim() === 'delete') {
-    const replyToId = ctx.message.reply_to_message.message_id
-    const pendingDeletes = global.rockyballPendingDeletes || new Map()
-    
-    // Only proceed if this is a reply to a tracked confirmation message
-    if (pendingDeletes.has(replyToId)) {
-      const deleteInfo = pendingDeletes.get(replyToId)
-      
-      if (deleteInfo.userId === ctx.from.id && deleteInfo.chatId === ctx.chat.id) {
-        const deleted = deleteMessage(deleteInfo.messageId)
-        
-        if (deleted) {
-          await ctx.reply('Рокк ебол! Картинка удалена.', {
-            reply_to_message_id: ctx.message.message_id,
-            allow_sending_without_reply: true
-          })
-          
-          try {
-            await ctx.deleteMessage(replyToId)
-          } catch (error) {
-            console.log('Не удалось удалить сообщение')
-          }
-        } else {
-          await ctx.reply('Не удалось удалить картинку', {
-            reply_to_message_id: ctx.message.message_id,
-            allow_sending_without_reply: true
-          })
-        }
-        
-        clearTimeout(deleteInfo.timeout)
-        pendingDeletes.delete(replyToId)
+      } catch (error) {
+        console.error('Error sending no images message:', error)
       }
     }
   }

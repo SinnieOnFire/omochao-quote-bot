@@ -90,26 +90,17 @@ function getRandomUniqueQuote(accessibleQuoteIds, recentQuoteIds) {
   // If we've exhausted all quotes, reset and use all quotes again
   if (availableQuotes.length === 0) {
     console.log('All quotes have been sent recently, resetting for chat');
-    // Handle single quote case
     if (accessibleQuoteIds.length === 1) {
       return accessibleQuoteIds[0];
     }
-    return accessibleQuoteIds[typeof randomInt === 'function' 
-      ? randomInt(0, accessibleQuoteIds.length - 1)
-      : Math.floor(Math.random() * accessibleQuoteIds.length)];
+    return accessibleQuoteIds[randomInt(0, accessibleQuoteIds.length)];
   }
-  
-  // Handle single available quote
+
   if (availableQuotes.length === 1) {
     return availableQuotes[0];
   }
-  
-  // Return a random quote from available quotes
-  const randomIndex = typeof randomInt === 'function' 
-    ? randomInt(0, availableQuotes.length - 1)
-    : Math.floor(Math.random() * availableQuotes.length);
-    
-  return availableQuotes[randomIndex];
+
+  return availableQuotes[randomInt(0, availableQuotes.length)];
 }
 
 /**
@@ -348,17 +339,10 @@ module.exports = async (ctx) => {
         // If photo sending fails (e.g., file_id expired), fall back to text only
         console.error('Error sending photo for quote', quoteId, ':', photoError.message || photoError);
         console.error('Photo details:', quote.photo);
-        if (quote.text && quote.text.trim().length > 0) {
-          await ctx.replyWithHTML(messageText + '\n<i>[В цитате была картинка которая сейчас недоступна]</i>', {
-            reply_to_message_id: ctx.message.message_id,
-            allow_sending_without_reply: true
-          });
-        } else {
-          await ctx.replyWithHTML(messageText + '\n<i>[В цитате была картинка которая сейчас недоступна]</i>', {
-            reply_to_message_id: ctx.message.message_id,
-            allow_sending_without_reply: true
-          });
-        }
+        await ctx.replyWithHTML(messageText + '\n<i>[В цитате была картинка которая сейчас недоступна]</i>', {
+          reply_to_message_id: ctx.message.message_id,
+          allow_sending_without_reply: true
+        });
       }
     } else {
       // Text only quote

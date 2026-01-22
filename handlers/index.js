@@ -27,6 +27,5 @@ module.exports = {
   handleInlineQuery: require('./inline-query'),
   handleRetroQuote: require('./retroq'),
   handleRockyball: require('./rockyball'),
-  handleUserJoin: require('./user-join'),
-  handleOLolsBotResponse: require('./olols-bot-response')
+  handleUserJoin: require('./user-join')
 }

@@ -12,17 +12,22 @@ composer.use(async (ctx, next) => {
       for (const member of new_chat_members) {
         // Don't send message if a bot joined
         if (!member.is_bot) {
-          let message
-          if (member.username) {
-            // If user has username, use @username (will auto-mention)
-            message = `@${member.username}, назови три любимых игры из серии Sonic the Hedgehog, чтобы продолжить.`
-            console.log('Sending welcome message for user:', `@${member.username}`, 'to chat:', chat.id)
-            await ctx.telegram.sendMessage(chat.id, message)
-          } else {
-            // If no username, use HTML mention with user ID
-            message = `<a href="tg://user?id=${member.id}">${member.first_name}</a>, назови три любимых игры из серии Sonic the Hedgehog чтобы продолжить.`
-            console.log('Sending welcome message for user:', member.first_name, 'to chat:', chat.id)
-            await ctx.telegram.sendMessage(chat.id, message, { parse_mode: 'HTML' })
+          // Send welcome message
+          try {
+            let message
+            if (member.username) {
+              // If user has username, use @username (will auto-mention)
+              message = `@${member.username}, назови три любимых игры из серии Sonic the Hedgehog, чтобы продолжить.`
+              console.log('Sending welcome message for user:', `@${member.username}`, 'to chat:', chat.id)
+              await ctx.telegram.sendMessage(chat.id, message)
+            } else {
+              // If no username, use HTML mention with user ID
+              message = `<a href="tg://user?id=${member.id}">${member.first_name}</a>, назови три любимых игры из серии Sonic the Hedgehog чтобы продолжить.`
+              console.log('Sending welcome message for user:', member.first_name, 'to chat:', chat.id)
+              await ctx.telegram.sendMessage(chat.id, message, { parse_mode: 'HTML' })
+            }
+          } catch (welcomeError) {
+            console.error('Error sending welcome message:', welcomeError)
           }
 
           // Send notification to admin with @oLolsBot deep link
